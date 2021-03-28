@@ -1,3 +1,16 @@
+from argparse import Namespace
+import time
+import sys
+import pprint
+import numpy as np
+from PIL import Image
+import torch
+import torchvision.transforms as transforms
+
+
+
+
+
 import argparse
 import sys
 
@@ -13,14 +26,40 @@ s1.publish(send_addr)
 s1.dial(send_addr)
 
 
+
 s2 = pynng.Sub0()
 s2.subscribe("")
 s2.listen(recieve_addr)
+recieved_images= []
 
 
 
+#  we load the model
+model_path = EXPERIMENT_ARGS['model_path']
 
-async def createMorphing()
+if os.path.getsize(model_path) < 1000000:
+  raise ValueError("Pretrained model was unable to be downlaoded correctly!")
+
+ckpt = torch.load(model_path, map_location='cpu')
+opts = ckpt['opts']
+
+# update the training options
+opts['checkpoint_path'] = model_path
+if 'learn_in_w' not in opts:
+    opts['learn_in_w'] = False
+
+opts = Namespace(**opts)
+net = pSp(opts)
+net.eval()
+net.cuda()
+print('Model successfully loaded!')
+
+
+async def createMorphing():
+    img_transforms = EXPERIMENT_ARGS['transform']
+    transformed_images = [img_transforms(image) for image in images]
+    batched_images = torch.stack(transformed_images, dim=0)
+
 
 
 async def send(data):
@@ -54,6 +93,7 @@ async def main():
         msg = await sub.arecv_msg()
         source_addr = str(msg.pipe.remote_address)
         content = msg.bytes.decode()
+        recieved_images.append(content)
         print('{} says: {}'.format(source_addr, content))
 
 
