@@ -275,10 +275,13 @@ def loopAvatarify():
         'postproc': 0
     }
 
-
+    spout.check()
+    # receive data
+    frame = spout.receive()
     #Here NDI process
     # caution, without update the NDI update images. We can not see the update
-    frame = reciever.read()
+    # frame = reciever.read()
+
     stream_img_size = frame.shape[1], frame.shape[0]
     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)# Color convert
     green_overlay = False
@@ -354,6 +357,7 @@ def loopAvatarify():
 
     preview_frame = frame.copy()
 
+
     if green_overlay:
         green_alpha = 0.8
         overlay = preview_frame.copy()
@@ -376,17 +380,20 @@ def loopAvatarify():
 
     cv2.imshow('cam', preview_frame[..., ::-1])
 
+
     if out is not None:
         if not opt.no_pad:
             out = pad_img(out, stream_img_size)
 
         cv2.imshow('avatarify_window1', out[..., ::-1])
+        spout.send(out)
 
     fps_hist.append(tt.toc(total=True))
     if len(fps_hist) == 10:
         fps = 10 / (sum(fps_hist) / 1000)
         fps_hist = []
 
+#this
 async def mainLoop():
     try:
         while True:
@@ -528,21 +535,21 @@ if __name__ == "__main__":
     print('---------start setting up Spout')
 
     # create spout object
-    spout = Spout(silent = False)
+    spout = Spout(silent = True)
     # create receiver
     spout.createReceiver('input')
     # create sender
     spout.createSender('output')
 
-    while True :
-        # check on close window
-        spout.check()
-        # receive data
-        data = spout.receive()
-        # send data
-        data = 255 - data
-        print(data)
-        spout.send(data)
+    # while True :
+    #     # check on close window
+    #     spout.check()
+    #     # receive data
+    #     data = spout.receive()
+    #     # send data
+    #     data = 255 - data
+    #     print(data)
+    #     spout.send(data)
 
 
     print('---------finish setting up Spout')
