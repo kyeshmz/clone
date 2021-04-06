@@ -540,24 +540,7 @@ if __name__ == "__main__":
     spout.createReceiver('input')
     # create sender
     spout.createSender('output')
-
-    # while True :
-    #     # check on close window
-    #     spout.check()
-    #     # receive data
-    #     data = spout.receive()
-    #     # send data
-    #     data = 255 - data
-    #     print(data)
-    #     spout.send(data)
-
-
     print('---------finish setting up Spout')
-
-
-    print('---------start setting up NDI')
-    initNdi()
-    print('---------finish setting up NDI')
 
     print('---------start setting up Avatarify')
     initAvatarify()
