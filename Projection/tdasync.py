@@ -26,10 +26,6 @@ the listening process.  Whatever you type into the listening process is sent to
 
 """
 
-import argparse
-
-import pynng
-import trio
 # import modules
 import argparse
 import base64
@@ -46,25 +42,29 @@ import cv2
 import cv2 as cv
 import dlib
 import numpy as np
+import pynng
 import scipy.ndimage
 import torch
 import torchvision as tv
-from imutils import face_utils
-from models.psp import pSp
+import trio
 from PIL import Image
 from pynng import Pair0
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from imutils import face_utils
+from models.psp import pSp
 from utils.common import tensor2im
 
 print('starting')
 transform = tv.transforms.Compose([
-        tv.transforms.Resize((256, 256)),
-        tv.transforms.ToTensor(),
-        tv.transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-    ])
+    tv.transforms.Resize((256, 256)),
+    tv.transforms.ToTensor(),
+    tv.transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+])
 
 #  Load Pretrained Model
-model_path = 'pretrained_models/psp_ffhq_encode.pt'
+model_path = '../pretrained_models/psp_ffhq_encode.pt'
 opts = torch.load(model_path, map_location='cuda:0')['opts']
 opts['checkpoint_path'] = model_path
 # if 'learn_in_w' not in opts: opts['learn_in_w'] = False
@@ -74,13 +74,14 @@ net.to('cuda:0')
 face_detector = dlib.get_frontal_face_detector()
 face_predictor = dlib.shape_predictor(
     './shape_predictor_68_face_landmarks.dat')
-    
+addr = ""
 
 try:
     run_sync = trio.to_thread.run_sync
 except AttributeError:
     # versions of trio prior to 0.12.0 used this method
     run_sync = trio.run_sync_in_worker_thread
+
 
 async def image_align(src_file, lm, enable_padding=False):
     # Align function from FFHQ dataset pre-processing step
@@ -158,18 +159,6 @@ async def image_align(src_file, lm, enable_padding=False):
     return img
 
 
-
-async def send_eternally(sock):
-    """
-    Eternally listen for user input in the terminal and send it on all
-    available pipes.
-    """
-    while True:
-        stuff = await run_sync(input, cancellable=True)
-        for pipe in sock.pipes:
-            await pipe.asend(stuff.encode())
-
-
 async def recv_eternally(sock):
     while True:
         # global net
@@ -187,14 +176,14 @@ async def recv_eternally(sock):
         PIL_image = Image.open(recv_bytes)
         target_img = np.array(PIL_image)
         PIL_image.save('test3.jpg')
- 
+
         img_path = 'test3.jpg'
         st = time.time()
 
         # Alignment
         img = cv.imread(img_path)
         img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-     
+
         face = face_detector(img, 1)
         landmarks = face_predictor(img, face[0])
         landmarks = face_utils.shape_to_np(landmarks)
@@ -209,8 +198,8 @@ async def recv_eternally(sock):
         # Embedding
         img = transform(img).unsqueeze(0)
         img, latents = net(img.to('cuda:0').float(),
-                        return_latents=True,
-                        randomize_noise=False)
+                           return_latents=True,
+                           randomize_noise=False)
         img = tensor2im(img[0])
         latents = latents.to('cpu').detach().numpy()
         print(f'embed {time.time()-ed:.2f}')
@@ -218,50 +207,43 @@ async def recv_eternally(sock):
         # Save
         img_bytes = io.BytesIO()
         img.save(img_bytes, format='PNG')
-        # np.save('embedded_test3.npy', latents)
+
+        latent_bytes = io.BytesIO()
+        np.save(latent_bytes, latents)
         total_time = time.time() - all_st
         print(f'{total_time:.2f}, {total_time/len(img_path):.2f}')
         # print(typeof(img))
         img_64 = base64.b64encode(img_bytes.getvalue())
+        print(type(img_bytes.getvalue()))
+        print(latent_bytes)
 
-
+        send_dict = {
+            'ip': str(recv_msg.pipe.remote_address),
+            'image': str(img_bytes.getvalue()),
+            'latent': str(latent_bytes.getvalue())
+        }
+        send_dict_data = json.dumps(send_dict, indent=2).encode('utf-8')
+        print('sending')
         for pipe in sock.pipes:
-            await pipe.asend(img_64)
-            await pipe.asend(latents.tobytes())
-
+            await pipe.asend(send_dict_data)
+            # await pipe.asend(img_64)
+            # await pipe.asend(latents.tobytes())
 
 
 async def main():
-    # p = argparse.ArgumentParser(description=__doc__)
-    # p.add_argument(
-    #     'mode',
-    #     help='Whether the socket should "listen" or "dial"',
-    #     choices=['listen', 'dial'],
-    #     nargs='?'
-    #     const='dial'
-    # )
-    # p.add_argument(
-    #     'addr',
-    #     help='Address to listen or dial; e.g. tcp://127.0.0.1:13134',
-    # )
-    # args = p.parse_args()
 
     td_addr = "tcp://172.25.111.30:5001"
     proj_addr = "tcp://172.25.157.35:5001"
 
     print('starting')
-    input_dir = 'myimages/raw_old/'
-    output_dir = 'myimages/result/'
+
     model_path = 'pretrained_models/psp_ffhq_encode.pt'
 
     print("ready")
 
     with pynng.Pair1(polyamorous=True) as sock:
         async with trio.open_nursery() as n:
-            # if args.mode == 'listen':
-                # the listening socket can get dialled by any number of dialers.
-                # add a couple callbacks to see when the socket is receiving
-                # connections.
+
             def pre_connect_cb(pipe):
                 addr = str(pipe.remote_address)
                 print('~~~~got connection from {}'.format(addr))
@@ -269,13 +251,11 @@ async def main():
             def post_remove_cb(pipe):
                 addr = str(pipe.remote_address)
                 print('~~~~goodbye for now from {}'.format(addr))
+
             sock.add_pre_pipe_connect_cb(pre_connect_cb)
             sock.add_post_pipe_remove_cb(post_remove_cb)
             sock.dial(td_addr)
-            # else:
-            #     sock.dial(args.addr)
             n.start_soon(recv_eternally, sock)
-            # n.start_soon(send_eternally, sock)
 
 
 if __name__ == '__main__':
