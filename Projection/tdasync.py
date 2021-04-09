@@ -219,7 +219,7 @@ async def recv_eternally(sock):
 
         send_dict = {
             'ip': str(recv_msg.pipe.remote_address),
-            'image': str(img_bytes.getvalue()),
+            'image': img_64,
             'latent': str(latent_bytes.getvalue())
         }
         send_dict_data = json.dumps(send_dict, indent=2).encode('utf-8')
