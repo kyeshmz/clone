@@ -275,12 +275,13 @@ def loopAvatarify():
         'postproc': 0
     }
 
-    spout.check()
-    # receive data
-    frame = spout.receive()
+    # spout receive data
+    # spout.check()
+    # frame = spout.receive()
+
     #Here NDI process
     # caution, without update the NDI update images. We can not see the update
-    # frame = reciever.read()
+    frame = reciever.read()
 
     stream_img_size = frame.shape[1], frame.shape[0]
     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)# Color convert
@@ -386,7 +387,7 @@ def loopAvatarify():
             out = pad_img(out, stream_img_size)
 
         cv2.imshow('avatarify_window1', out[..., ::-1])
-        #spout.send(out)
+        spout.send(out)
 
     fps_hist.append(tt.toc(total=True))
     if len(fps_hist) == 10:
@@ -542,11 +543,16 @@ if __name__ == "__main__":
     instance_id = opt.instance_id
     print('---------instance_id', instance_id)
 
+    print('---------start setting up NDI')
+    initNdi()
+    print('---------finish setting up NDI')
+
 
     print('---------start setting up Spout' + str(instance_id))
     # create spout object
     spout = Spout(silent = True)
     # create receiver
+    # but will not user this
     spout.createReceiver('input'+ str(instance_id))
     # create sender
     spout.createSender('output' + str(instance_id))
