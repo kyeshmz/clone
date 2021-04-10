@@ -1,2 +1,7 @@
 .DS_Store
 __pycache__
+Projector/__pycache__
+﻿.py-avatarify
+.pyenvTest
+Main/.vscode
+Main/.*
