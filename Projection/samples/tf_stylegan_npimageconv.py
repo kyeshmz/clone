@@ -12,6 +12,7 @@ import IPython.display
 import numpy as np
 import PIL.Image
 import pretrained_networks
+import tensorflow as tf
 from PIL import Image, ImageDraw
 
 #  code used from https://colab.research.google.com/drive/11shCb5N-01Rkl5GhnCtBKX0pdw3FZiuD?usp=sharing#scrollTo=BQIhdSRcXC-Q
@@ -82,12 +83,8 @@ linspace = np.linspace(0, 1.0, steps)
 print('linspace', linspace)
 linspace = linspace.reshape(-1, 1, 1).astype(np.float32)
 
-me_dlatent = np.load(
-    '/content/drive/MyDrive/superception/stylegan2encoder_data/generate/ky3_01.npy'
-)
-he_dlatent = np.load(
-    '/content/drive/MyDrive/superception/stylegan2encoder_data/generate/k1_01.npy'
-)
+me_dlatent = np.load('npy/1shimizu_01.npy')
+he_dlatent = np.load('npy/kasa1_01.npy')
 
 # morphing start
 
@@ -111,9 +108,9 @@ edited_dlatents = edited_dlatents.reshape(steps, 1, 18, 512)
 print(edited_dlatents.shape)
 imgs = generate_images_from_ws(edited_dlatents)
 # print( len(imgs) )
-os.mkdir('./results')
+# os.mkdir('./results')
 
 for img_idx, img in enumerate(imgs):
     img = PIL.Image.fromarray(img)
     img = img.resize((H, W), PIL.Image.ANTIALIAS)
-    img.save('/results/img_' + str(100 + img_idx) + '.jpg')
+    img.save('results/img_' + str(100 + img_idx) + '.jpg')

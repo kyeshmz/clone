@@ -37,7 +37,6 @@ import sys
 import time
 from argparse import Namespace
 
-import curio
 import cv2
 import cv2 as cv
 import dlib
