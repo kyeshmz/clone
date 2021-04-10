@@ -408,16 +408,23 @@ async def mainLoop():
 async def init_main():
     global osc_client
 
-    log("setting up osc_client")
+    print("setting up osc_client")
     #setting up OSC
     ip = "127.0.0.1"
-    port = 5005
+
+    instance_id = opt.instance_id
+    port = 5500 + instance_id
+    print("listening port", port)
+
     osc_dispatcher = dispatcher.Dispatcher()
     osc_dispatcher.map("/message", osc_messege_handler)
     server = AsyncIOOSCUDPServer((ip, port), osc_dispatcher, asyncio.get_event_loop())
     transport, protocol = await server.create_serve_endpoint()  # Create datagram endpoint and start serving
-    osc_client = udp_client.SimpleUDPClient("127.0.0.1", 5006)
-    log("sini up osc_client")
+
+    sendingport =  5600 + instance_id
+    print("sending port", sendingport)
+    osc_client = udp_client.SimpleUDPClient("127.0.0.1", sendingport)
+    print("set up osc_client")
 
     await mainLoop()  # Enter main loop of program
 
@@ -532,14 +539,17 @@ def osc_messege_handler(unused_addr, *p):
 
 if __name__ == "__main__":
 
-    print('---------start setting up Spout')
+    instance_id = opt.instance_id
+    print('---------instance_id', instance_id)
 
+
+    print('---------start setting up Spout' + str(instance_id))
     # create spout object
     spout = Spout(silent = True)
     # create receiver
-    spout.createReceiver('input')
+    spout.createReceiver('input'+ str(instance_id))
     # create sender
-    spout.createSender('output')
+    spout.createSender('output' + str(instance_id))
     print('---------finish setting up Spout')
 
     print('---------start setting up Avatarify')
