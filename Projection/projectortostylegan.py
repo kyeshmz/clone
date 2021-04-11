@@ -170,7 +170,7 @@ async def recv_eternally(sock):
         from_landmarks = face_predictor(from_NP, from_face[0])
         from_landmarks = face_utils.shape_to_np(from_landmarks)
         from_alignimg = await image_align(from_PIL, from_landmarks)
-        from_alignimg64 = base64.b64encode(image_to_byte_array(from_alignimg))
+        # from_alignimg64 = base64.b64encode(image_to_byte_array(from_alignimg))
 
         to_face = face_detector(to_NP, 1)
         to_landmarks = face_predictor(to_NP, to_face[0])
@@ -198,16 +198,16 @@ async def recv_eternally(sock):
         #  start of tensorlfow
         #W space vector
         dlatent_from = from_latents
-        print(dlatent_from.shape)
+        # print(dlatent_from.shape)
         dlatent_to = to_latents
-        print(dlatent_to.shape)
+        # print(dlatent_to.shape)
 
         dlatent_morph = (dlatent_to - dlatent_from)
         # print( np.linalg.norm(dlatent_morph))
 
         edited_dlatents = dlatent_from + linspace * dlatent_morph
         edited_dlatents = edited_dlatents.reshape(steps, 1, 18, 512)
-        print(edited_dlatents.shape)
+        # print(edited_dlatents.shape)
 
         imgs = generate_images_from_ws(edited_dlatents)
         generate_time = time.time()
@@ -216,16 +216,16 @@ async def recv_eternally(sock):
 
         morph_images = []
         for img_idx, img in enumerate(imgs):
-            # img = PIL.Image.fromarray(img)
-            # img = img.resize((H, W), PIL.Image.ANTIALIAS)
-            img_64 = base64.b64encode(img)
-            morph_images.append(img_64)
+            img = PIL.Image.fromarray(img)
+            img = img.resize((H, W), PIL.Image.ANTIALIAS)
+            # img_64 = base64.b64encode(img)
+            morph_images.append(img)
             # img.save('results/img_' + str(100 + img_idx) + '.jpg')
         print(f'creation {time.time()-embed_time:.2f}')
         # sending
         send_data = {
-            'aligned_from': from_alignimg64,
-            "aligned_to": to_alignimg64,
+            'aligned_from': from_alignimg,
+            "aligned_to": to_alignimg,
             "morphing_images": morph_images
         }
         send_data_pkl = pickle.dumps(send_data)
