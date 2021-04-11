@@ -28,3 +28,8 @@ error: Microsoft Visual C++ 14.0 is required. Get it with "Build Tools for Visua
  
  - model data
  -'vox-adv-cpk.pth.tar' manually put in the 'avatarify folder' 
+
+
+###  first launch of avatarify
+- some model data load in the first launch. 
+
