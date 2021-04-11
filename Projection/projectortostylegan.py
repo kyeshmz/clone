@@ -5,6 +5,7 @@ import glob
 import io
 import json
 import os
+import pickle
 import re
 import sys
 import time
@@ -37,67 +38,12 @@ from imutils import face_utils
 from models.psp import pSp
 from utils.common import tensor2im
 
-print('starting')
-print('starting tensorflow load')
 
-# start stylegan configs
-network_pkl = "networks/stylegan2-ffhq-config-f.pkl"
-
-print('Loading networks from "%s"...' % network_pkl)
-_G, _D, Gs = pretrained_networks.load_networks(network_pkl)
-noise_vars = [
-    var for name, var in Gs.components.synthesis.vars.items()
-    if name.startswith('noise')
-]
-
-Gs_kwargs = dnnlib.EasyDict()
-Gs_kwargs.output_transform = dict(func=tflib.convert_images_to_uint8,
-                                  nchw_to_nhwc=True)
-Gs_kwargs.randomize_noise = False
-
-steps = 60  # 片側．生成される画像は，(steps-1) x 2 + 1
-H = W = 512
-
-SEEDs = [4336458, 222181]
-
-# linspace
-linspace = np.linspace(0, 1.0, steps)
-# tmp = -1 * np.sort(linspace)[::-1]
-# linspace = np.hstack((tmp[:-1], linspace))
-print('linspace', linspace)
-linspace = linspace.reshape(-1, 1, 1).astype(np.float32)
-
-fromSeed = SEEDs[0]
-toSeed = SEEDs[1]
-seeds = [fromSeed, toSeed]
-zs = generate_zs_from_seeds(seeds)
-
-# end stylegan configs
-print('starting pytorch loads')
-transform = tv.transforms.Compose([
-    tv.transforms.Resize((256, 256)),
-    tv.transforms.ToTensor(),
-    tv.transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-])
-
-#  Load Pretrained Model
-model_path = '../pretrained_models/psp_ffhq_encode.pt'
-opts = torch.load(model_path, map_location='cuda:0')['opts']
-opts['checkpoint_path'] = model_path
-# if 'learn_in_w' not in opts: opts['learn_in_w'] = False
-net = pSp(Namespace(**opts))
-net.eval()
-net.to('cuda:0')
-face_detector = dlib.get_frontal_face_detector()
-face_predictor = dlib.shape_predictor(
-    './shape_predictor_68_face_landmarks.dat')
-addr = ""
-
-try:
-    run_sync = trio.to_thread.run_sync
-except AttributeError:
-    # versions of trio prior to 0.12.0 used this method
-    run_sync = trio.run_sync_in_worker_thread
+def image_to_byte_array(image: Image):
+    imgByteArr = io.BytesIO()
+    image.save(imgByteArr, format='PNG')
+    imgByteArr = imgByteArr.getvalue()
+    return imgByteArr
 
 
 def generate_zs_from_seeds(seeds):
@@ -115,29 +61,6 @@ def generate_images_from_ws(dlatents):
         img = Gs.components.synthesis.run(dlatent, **Gs_kwargs)
         imgs.append(img[0])
     return imgs
-
-
-def create_image_grid(imgs, size_=256):
-    canvas = PIL.Image.new('RGB', (size_ * len(imgs), size_), 'white')
-    for idx, img in enumerate(imgs):
-        img = PIL.Image.fromarray(img)
-        img = img.resize((size_, size_), PIL.Image.ANTIALIAS)
-        canvas.paste(img, (size_ * idx, 0))
-    return canvas
-
-
-def createImageGrid(images, scale=0.25, rows=1):
-    w, h = images[0].size
-    w = int(w * scale)
-    h = int(h * scale)
-    height = rows * h
-    cols = ceil(len(images) / rows)
-    width = cols * w
-    canvas = PIL.Image.new('RGBA', (width, height), 'white')
-    for i, img in enumerate(images):
-        img = img.resize((w, h), PIL.Image.ANTIALIAS)
-        canvas.paste(img, (w * (i % cols), h * (i // cols)))
-    return canvas
 
 
 async def image_align(src_file, lm, enable_padding=False):
@@ -169,8 +92,8 @@ async def image_align(src_file, lm, enable_padding=False):
     qsize = np.hypot(*x) * 2
 
     # Open image
-    # img = src_file
-    img = Image.open(src_file)
+    img = src_file
+    # img = Image.open(src_file)
 
     # Crop.
     border = max(int(np.rint(qsize * 0.1)), 3)
@@ -225,73 +148,58 @@ async def recv_eternally(sock):
         all_st = time.time()
 
         recv_msg = await sock.arecv_msg()
-        recv_img_bytes = base64.b64decode(recv_msg.bytes.decode())
-        print(type(recv_img_bytes))
+        print('recieved')
+        recv_pkl = pickle.loads(recv_msg.bytes)
+        from_img_msg = recv_pkl.get('from')
+        to_img_msg = recv_pkl.get('to')
 
-        recv_bytes = io.BytesIO(recv_img_bytes)
+        from_img_decode = base64.b64decode(from_img_msg)
+        from_img_bytes = io.BytesIO(from_img_decode)
+        from_PIL = Image.open(from_img_bytes)
+        from_NP = np.array(from_PIL)
 
-        PIL_image = Image.open(recv_bytes)
-        target_img = np.array(PIL_image)
-        PIL_image.save('test3.jpg')
+        to_img_decode = base64.b64decode(to_img_msg)
+        to_img_bytes = io.BytesIO(to_img_decode)
+        to_PIL = Image.open(to_img_bytes)
+        to_NP = np.array(to_PIL)
 
-        img_path = 'test3.jpg'
         st = time.time()
 
         # Alignment
-        img = cv.imread(img_path)
-        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        from_face = face_detector(from_NP, 1)
+        from_landmarks = face_predictor(from_NP, from_face[0])
+        from_landmarks = face_utils.shape_to_np(from_landmarks)
+        from_alignimg = await image_align(from_PIL, from_landmarks)
+        from_alignimg64 = base64.b64encode(image_to_byte_array(from_alignimg))
 
-        face = face_detector(img, 1)
-        landmarks = face_predictor(img, face[0])
-        landmarks = face_utils.shape_to_np(landmarks)
-        img = await image_align(img_path, landmarks)
-
-        img.save('aligned_test3.png')
-        # continue
-        # img = Image.open(img_path)
+        to_face = face_detector(to_NP, 1)
+        to_landmarks = face_predictor(to_NP, to_face[0])
+        to_landmarks = face_utils.shape_to_np(to_landmarks)
+        to_alignimg = await image_align(to_PIL, to_landmarks)
+        to_alignimg64 = base64.b64encode(image_to_byte_array(to_alignimg))
 
         ed = time.time()
         print(f'align {ed-st:.2f}', end=', ')
         # Embedding
-        img = transform(img).unsqueeze(0)
-        img, latents = net(img.to('cuda:0').float(),
-                           return_latents=True,
-                           randomize_noise=False)
-        img = tensor2im(img[0])
-        latents = latents.to('cpu').detach().numpy()
-        print(f'embed {time.time()-ed:.2f}')
+        from_embedimg = transform(from_alignimg).unsqueeze(0)
+        from_projimg, from_latents = net(from_embedimg.to('cuda:0').float(),
+                                         return_latents=True,
+                                         randomize_noise=False)
+        from_latents = from_latents.to('cpu').detach().numpy()
 
-        # Save
-        img_bytes = io.BytesIO()
-        img.save(img_bytes, format='PNG')
-
-        latent_bytes = io.BytesIO()
-        np.save(latent_bytes, latents)
-        total_time = time.time() - all_st
-        print(f'{total_time:.2f}, {total_time/len(img_path):.2f}')
-        # print(typeof(img))
-        img_64 = base64.b64encode(img_bytes.getvalue())
-        print(type(img_bytes.getvalue()))
-        print(latent_bytes)
-
-        send_dict = {
-            'ip': str(recv_msg.pipe.remote_address),
-            'image': img_64,
-            'latent': str(latent_bytes.getvalue())
-        }
-        send_dict_data = json.dumps(send_dict, indent=2).encode('utf-8')
-        print('sending')
-        for pipe in sock.pipes:
-            await pipe.asend(send_dict_data)
-            # await pipe.asend(img_64)
-            # await pipe.asend(latents.tobytes())
+        to_embedimg = transform(to_alignimg).unsqueeze(0)
+        to_projimg, to_latents = net(to_embedimg.to('cuda:0').float(),
+                                     return_latents=True,
+                                     randomize_noise=False)
+        to_latents = to_latents.to('cpu').detach().numpy()
+        embed_time = time.time()
+        print(f'embed {embed_time-ed:.2f}')
 
         #  start of tensorlfow
         #W space vector
-        dlatent_from = me_dlatent
+        dlatent_from = from_latents
         print(dlatent_from.shape)
-        dlatent_to = he_dlatent
-        #Gs.components.mapping.run(zs[1], None)
+        dlatent_to = to_latents
         print(dlatent_to.shape)
 
         dlatent_morph = (dlatent_to - dlatent_from)
@@ -300,11 +208,31 @@ async def recv_eternally(sock):
         edited_dlatents = dlatent_from + linspace * dlatent_morph
         edited_dlatents = edited_dlatents.reshape(steps, 1, 18, 512)
         print(edited_dlatents.shape)
+
         imgs = generate_images_from_ws(edited_dlatents)
+        generate_time = time.time()
+
+        print(f'generate {generate_time-embed_time:.2f}')
+
+        morph_images = []
         for img_idx, img in enumerate(imgs):
-            img = PIL.Image.fromarray(img)
-            img = img.resize((H, W), PIL.Image.ANTIALIAS)
-            img.save('/results/img_' + str(100 + img_idx) + '.jpg')
+            # img = PIL.Image.fromarray(img)
+            # img = img.resize((H, W), PIL.Image.ANTIALIAS)
+            img_64 = base64.b64encode(img)
+            morph_images.append(img_64)
+            # img.save('results/img_' + str(100 + img_idx) + '.jpg')
+        print(f'creation {time.time()-embed_time:.2f}')
+        # sending
+        send_data = {
+            'aligned_from': from_alignimg64,
+            "aligned_to": to_alignimg64,
+            "morphing_images": morph_images
+        }
+        send_data_pkl = pickle.dumps(send_data)
+        print('sending')
+        print('morph length', len(morph_images))
+        for pipe in sock.pipes:
+            await pipe.asend(send_data_pkl)
 
 
 async def main():
@@ -313,9 +241,6 @@ async def main():
     proj_addr = "tcp://172.25.157.35:5001"
 
     print('starting')
-
-    model_path = 'pretrained_models/psp_ffhq_encode.pt'
-
     print("ready")
 
     with pynng.Pair1(polyamorous=True) as sock:
@@ -334,6 +259,68 @@ async def main():
             sock.dial(td_addr)
             n.start_soon(recv_eternally, sock)
 
+
+print('starting')
+print('starting tensorflow load')
+
+# start stylegan configs
+network_pkl = "networks/stylegan2-ffhq-config-f.pkl"
+
+print('Loading networks from "%s"...' % network_pkl)
+_G, _D, Gs = pretrained_networks.load_networks(network_pkl)
+noise_vars = [
+    var for name, var in Gs.components.synthesis.vars.items()
+    if name.startswith('noise')
+]
+
+Gs_kwargs = dnnlib.EasyDict()
+Gs_kwargs.output_transform = dict(func=tflib.convert_images_to_uint8,
+                                  nchw_to_nhwc=True)
+Gs_kwargs.randomize_noise = False
+
+steps = 120
+H = W = 512
+
+SEEDs = [4336458, 222181]
+
+# linspace
+linspace = np.linspace(0, 1.0, steps)
+# tmp = -1 * np.sort(linspace)[::-1]
+# linspace = np.hstack((tmp[:-1], linspace))
+print('linspace', linspace)
+linspace = linspace.reshape(-1, 1, 1).astype(np.float32)
+
+fromSeed = SEEDs[0]
+toSeed = SEEDs[1]
+seeds = [fromSeed, toSeed]
+zs = generate_zs_from_seeds(seeds)
+
+# end stylegan configs
+print('starting pytorch loads')
+transform = tv.transforms.Compose([
+    tv.transforms.Resize((256, 256)),
+    tv.transforms.ToTensor(),
+    tv.transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+])
+
+#  Load Pretrained Model
+model_path = '../pretrained_models/psp_ffhq_encode.pt'
+opts = torch.load(model_path, map_location='cuda:0')['opts']
+opts['checkpoint_path'] = model_path
+# if 'learn_in_w' not in opts: opts['learn_in_w'] = False
+net = pSp(Namespace(**opts))
+net.eval()
+net.to('cuda:0')
+face_detector = dlib.get_frontal_face_detector()
+face_predictor = dlib.shape_predictor(
+    './shape_predictor_68_face_landmarks.dat')
+addr = ""
+
+try:
+    run_sync = trio.to_thread.run_sync
+except AttributeError:
+    # versions of trio prior to 0.12.0 used this method
+    run_sync = trio.run_sync_in_worker_thread
 
 if __name__ == '__main__':
     try:
