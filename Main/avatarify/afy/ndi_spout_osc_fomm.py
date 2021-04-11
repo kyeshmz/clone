@@ -98,6 +98,7 @@ def load_stylegan_avatar():
 
 
 def load_images(IMG_SIZE = 256):
+    print('load target face images..')
     avatars = []
     filenames = []
     images_list = sorted(glob.glob(f'{opt.avatars}/*'))
@@ -495,6 +496,7 @@ def osc_messege_handler(unused_addr, *p):
     global is_calibrated
     global cur_ava
     global avatars
+    global avatar_names
 
     try:
         print(p[0])
@@ -503,6 +505,9 @@ def osc_messege_handler(unused_addr, *p):
             predictor.reset_frames()
             is_calibrated = True
 
+        if(p[0] == 'loadfaces'):
+            print('osc : loadfaces')
+            avatars, avatar_names = load_images()
 
         if(p[0] == 'nextFace'):
             print('switch to nextFace')
