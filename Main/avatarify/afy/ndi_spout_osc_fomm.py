@@ -281,20 +281,20 @@ def loopAvatarify():
 
     #Here NDI process
     # caution, without update the NDI update images. We can not see the update
-    tt.tic()
+    # tt.tic()
     spout.check()
     frame = spout.receive()
     # frame = reciever.read()
-    tt.tocp('reciever read')
+    # tt.tocp('reciever read')
 
-    tt.tic()
+    # tt.tic()
     stream_img_size = frame.shape[1], frame.shape[0]
     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)# Color convert
     green_overlay = False
-    tt.tocp('cvtColor')
+    # tt.tocp('cvtColor')
 
 
-    tt.tic()
+    # tt.tic()
 
     #Resize
     frame_proportion = 0.9
@@ -304,7 +304,7 @@ def loopAvatarify():
     frame, (frame_offset_x, frame_offset_y) = crop(frame, p=frame_proportion, offset_x=frame_offset_x, offset_y=frame_offset_y)
     frame = resize(frame, (IMG_SIZE, IMG_SIZE))[..., :3]
 
-    tt.tocp('crop')
+    # tt.tocp('crop')
 
 
     tt.tic()
@@ -328,7 +328,6 @@ def loopAvatarify():
         timing['predict'] = tt.toc()
     else:
         out = None
-        log("not is_calibrated")
 
     tt.tic()
 
@@ -396,10 +395,10 @@ def loopAvatarify():
         if not opt.no_pad:
             out = pad_img(out, stream_img_size)
 
-        out = draw_fps(out, fps, timing)
-
+        #Finnaly turn off here
+        # out = draw_fps(out, fps, timing)
         cv2.imshow('avatarify_window1', out[..., ::-1])
-        # spout.send(out)
+        spout.send(out)
 
     fps_hist.append(tt.toc(total=True))
     if len(fps_hist) == 10:
@@ -499,6 +498,7 @@ def initAvatarify():
     fps = 0
 
     log('Finish initAvatarify')
+    print('Waiting Calibrate OSC message')
 
 
 #OSC message handle
@@ -510,7 +510,8 @@ def osc_messege_handler(unused_addr, *p):
     global avatar_names
 
     try:
-        print(p[0])
+        print('FPS : ', fps)
+
         if(p[0] == 'calibrate'):
             print('calibrate face pose')
             predictor.reset_frames()
