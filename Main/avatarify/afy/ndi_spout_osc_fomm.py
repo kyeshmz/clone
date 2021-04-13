@@ -35,6 +35,7 @@ from pythonosc import udp_client
 from pythonosc.osc_server import AsyncIOOSCUDPServer
 import asyncio
 
+import time
 
 log = Tee('./var/log/cam_fomm.log')
 
@@ -277,16 +278,21 @@ def loopAvatarify():
     }
 
     # spout receive data
-    # spout.check()
-    # frame = spout.receive()
 
     #Here NDI process
     # caution, without update the NDI update images. We can not see the update
-    frame = reciever.read()
+    tt.tic()
+    spout.check()
+    frame = spout.receive()
+    # frame = reciever.read()
+    tt.tocp('reciever read')
 
+    tt.tic()
     stream_img_size = frame.shape[1], frame.shape[0]
     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)# Color convert
     green_overlay = False
+    tt.tocp('cvtColor')
+
 
     tt.tic()
 
@@ -298,6 +304,10 @@ def loopAvatarify():
     frame, (frame_offset_x, frame_offset_y) = crop(frame, p=frame_proportion, offset_x=frame_offset_x, offset_y=frame_offset_y)
     frame = resize(frame, (IMG_SIZE, IMG_SIZE))[..., :3]
 
+    tt.tocp('crop')
+
+
+    tt.tic()
     if find_keyframe:
         if is_new_frame_better(avatar, frame, predictor):
             log("Taking new frame!")
@@ -357,38 +367,39 @@ def loopAvatarify():
     elif key == ord('i'):
         show_fps = not show_fps
 
-    preview_frame = frame.copy()
+    # preview_frame = frame.copy()
 
 
-    if green_overlay:
-        green_alpha = 0.8
-        overlay = preview_frame.copy()
-        overlay[:] = (0, 255, 0)
-        preview_frame = cv2.addWeighted( preview_frame, green_alpha, overlay, 1.0 - green_alpha, 0.0)
+    # if green_overlay:
+    #     green_alpha = 0.8
+    #     overlay = preview_frame.copy()
+    #     overlay[:] = (0, 255, 0)
+    #     preview_frame = cv2.addWeighted( preview_frame, green_alpha, overlay, 1.0 - green_alpha, 0.0)
 
     timing['postproc'] = tt.toc()
 
-    if find_keyframe:
-        preview_frame = cv2.putText(preview_frame, display_string, (10, 220), 0, 0.5 * IMG_SIZE / 256, (255, 255, 255), 1)
+    # if find_keyframe:
+    #     preview_frame = cv2.putText(preview_frame, display_string, (10, 220), 0, 0.5 * IMG_SIZE / 256, (255, 255, 255), 1)
 
-    if show_fps:
-        preview_frame = draw_fps(preview_frame, fps, timing)
+    # if show_fps:
+    #     preview_frame = draw_fps(preview_frame, fps, timing)
 
-    if not is_calibrated:
-        preview_frame = draw_calib_text(preview_frame)
+    # if not is_calibrated:
+    #     preview_frame = draw_calib_text(preview_frame)
 
-    if not opt.hide_rect:
-        draw_rect(preview_frame)
+    # if not opt.hide_rect:
+    #     draw_rect(preview_frame)
 
-    cv2.imshow('cam', preview_frame[..., ::-1])
-
+    # cv2.imshow('cam', preview_frame[..., ::-1])
 
     if out is not None:
         if not opt.no_pad:
             out = pad_img(out, stream_img_size)
 
+        out = draw_fps(out, fps, timing)
+
         cv2.imshow('avatarify_window1', out[..., ::-1])
-        spout.send(out)
+        # spout.send(out)
 
     fps_hist.append(tt.toc(total=True))
     if len(fps_hist) == 10:
@@ -549,9 +560,8 @@ if __name__ == "__main__":
     print('---------instance_id', instance_id)
 
     print('---------start setting up NDI')
-    initNdi()
+    # initNdi()
     print('---------finish setting up NDI')
-
 
     print('---------start setting up Spout' + str(instance_id))
     # create spout object
