@@ -4,6 +4,7 @@ import base64
 import glob
 import io
 import json
+import multiprocessing
 import os
 import pickle
 import re
@@ -12,29 +13,33 @@ import time
 from argparse import Namespace
 from io import BytesIO
 from math import ceil
+from multiprocessing import Pool
 
 import curio
 import cv2
 import cv2 as cv
 import dlib
-import dnnlib
-import dnnlib.tflib as tflib
 import imageio
 import IPython.display
 import numpy as np
 import PIL.Image
-import pretrained_networks
 import pynng
 import scipy.ndimage
+import tensorflow as tf
 import torch
 import torchvision as tv
 import trio
 from PIL import Image, ImageDraw
 from pynng import Pair0
 
+import dnnlib
+import dnnlib.tflib as tflib
+import pretrained_networks
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from imutils import face_utils
+
 from models.psp import pSp
 from utils.common import tensor2im
 
@@ -55,11 +60,22 @@ def generate_zs_from_seeds(seeds):
     return zs
 
 
-def generate_images_from_ws(dlatents):
+async def generate_images_from_ws(dlatents):
     imgs = []
     for row, dlatent in enumerate(dlatents):
         img = Gs.components.synthesis.run(dlatent, **Gs_kwargs)
         imgs.append(img[0])
+    return imgs
+
+
+def generate_images_from_ws_array(dlatents):
+    imgs = []
+    # for row, dlatent in enumerate(dlatents):
+    #     img = Gs.components.synthesis.run(dlatent, **Gs_kwargs)
+    #     imgs.append(img[0])
+
+    img = Gs.components.synthesis.run(dlatents, **Gs_kwargs)
+    imgs.append(img)
     return imgs
 
 
@@ -139,12 +155,16 @@ async def image_align(src_file, lm, enable_padding=False):
     return img
 
 
+def resize(img):
+    imglist = []
+    img = PIL.Image.fromarray(img)
+    img = img.resize((H, W), PIL.Image.ANTIALIAS)
+    imglist.append(img)
+    return imglist
+
+
 async def recv_eternally(sock):
     while True:
-        # global net
-        # global transform
-        # global face_detector
-        # global face_predictor
         all_st = time.time()
 
         recv_msg = await sock.arecv_msg()
@@ -203,25 +223,42 @@ async def recv_eternally(sock):
         print(dlatent_to.shape)
 
         dlatent_morph = (dlatent_to - dlatent_from)
-        print( np.linalg.norm(dlatent_morph))
+        print(np.linalg.norm(dlatent_morph))
 
         edited_dlatents = dlatent_from + linspace * dlatent_morph
         edited_dlatents = edited_dlatents.reshape(steps, 1, 18, 512)
-        # print(edited_dlatents.shape)
+        # for making faster, but still gpu problem
+        # edited_dlatents = edited_dlatents.reshape(steps, 18, 512)
+        print(edited_dlatents.shape)
 
-        imgs = generate_images_from_ws(edited_dlatents)
+        # v = Pool(16)
+        # imgs = []
+        # imgs = v.map(generate_images_from_ws_array, edited_dlatents)
+        # imgs = [entry for sublist in imgs for entry in sublist]
+
+        # v.close()
+        # v.join()
+
+        imgs = await generate_images_from_ws(edited_dlatents)
+        # 120x (1024,1024,3)
         generate_time = time.time()
 
         print(f'generate {generate_time-embed_time:.2f}')
-
         morph_images = []
-        for img_idx, img in enumerate(imgs):
-            img = PIL.Image.fromarray(img)
-            img = img.resize((H, W), PIL.Image.ANTIALIAS)
-            # img_64 = base64.b64encode(img)
-            morph_images.append(img)
-            # img.save('results/img_' + str(100 + img_idx) + '.jpg')
-        print(f'creation {time.time()-embed_time:.2f}')
+        # for img_idx, img in enumerate(imgs):
+        #     img = PIL.Image.fromarray(img)
+        #     img = img.resize((H, W), PIL.Image.ANTIALIAS)
+        #     morph_images.append(img)
+        # img.save('results/img_' + str(100 + img_idx) + '.jpg')
+        # imgs = []
+
+        p = Pool(16)
+        morph_images = p.map(resize, imgs)
+        morph_images = [entry for sublist in morph_images for entry in sublist]
+        p.close()
+        p.join()
+
+        print(f'creation {time.time()-generate_time:.2f}')
         # sending
         send_data = {
             'aligned_from': from_alignimg,
@@ -231,6 +268,8 @@ async def recv_eternally(sock):
         send_data_pkl = pickle.dumps(send_data)
         print('sending')
         print('morph length', len(morph_images))
+        tf.reset_default_graph()
+
         for pipe in sock.pipes:
             await pipe.asend(send_data_pkl)
 
@@ -262,10 +301,8 @@ async def main():
 
 print('starting')
 print('starting tensorflow load')
-
 # start stylegan configs
 network_pkl = "networks/stylegan2-ffhq-config-f.pkl"
-
 print('Loading networks from "%s"...' % network_pkl)
 _G, _D, Gs = pretrained_networks.load_networks(network_pkl)
 noise_vars = [
@@ -277,10 +314,13 @@ Gs_kwargs = dnnlib.EasyDict()
 Gs_kwargs.output_transform = dict(func=tflib.convert_images_to_uint8,
                                   nchw_to_nhwc=True)
 Gs_kwargs.randomize_noise = False
-Gs_kwargs.minibatch_size = 1
+
+batchsize = 15
+# max is 20
+Gs_kwargs.minibatch_size = batchsize
 
 steps = 120
-H = W = 512
+H = W = 256
 
 SEEDs = [4336458, 222181]
 
