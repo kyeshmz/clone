@@ -5,3 +5,4 @@ Projector/__pycache__
 .pyenvTest
 Main/.vscode
 Main/.*
+.venv
