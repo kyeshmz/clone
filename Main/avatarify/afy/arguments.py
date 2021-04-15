@@ -27,7 +27,7 @@ parser.add_argument("--jpg_quality", type=int, default=95, help="Jpeg copression
 
 #added shks, for multiple instance in one machiine./
 parser.add_argument("--instance_id", type=int, default=1, help="1 or 2 for multiple instance in one machiine")
-
+parser.add_argument("--OscMainIP", type=str, default="127.0.0.1", help="Osc listening IP of Main Machine")
 
 parser.set_defaults(relative=False)
 parser.set_defaults(adapt_scale=False)
