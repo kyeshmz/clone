@@ -422,9 +422,10 @@ async def init_main():
     global osc_client
 
     mainPC_IP = opt.OscMainIP
-    print("setting up osc_client: ", mainPC_IP)
+    print("setting up osc_client:", mainPC_IP)
+
+    mainPC_IP = '10.10.3.48'
     #setting up OSC
-    MainPC_ip = mainPC_IP #"127.0.0.1"
     localIP = "127.0.0.1"
 
     instance_id = opt.instance_id
@@ -438,7 +439,7 @@ async def init_main():
 
     sendingport =  5600 + instance_id
     print("sending port", sendingport)
-    osc_client = udp_client.SimpleUDPClient(MainPC_ip, sendingport)
+    osc_client = udp_client.SimpleUDPClient(mainPC_IP, sendingport)
     print("set up osc_client")
 
     await mainLoop()  # Enter main loop of program
