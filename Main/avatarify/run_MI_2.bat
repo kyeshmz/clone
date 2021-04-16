@@ -1,6 +1,6 @@
 @echo off
 
-call scripts/settings_windows.bat
+@REM call scripts/settings_windows.bat
 
 set CONFIG=fomm/config/vox-adv-256.yaml
 
