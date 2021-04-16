@@ -220,36 +220,45 @@ def initNdi():
     # If more than 1 source detected, then list all sources detected and allow user to choose source.
     if(len(NDIsources) > 0):
         print(str(len(NDIsources)) + " NDI Sources Detected")
+        isAutoSet = False
+
         for x in range(len(NDIsources)):
             print(str(x) + ". "+NDIsources[x].name + " @ "+str(NDIsources[x].address))
+
+            foundId = (NDIsources[x].name).find('face' + str(int(instance_id)))
+            if(foundId is not -1):
+                print("Automatically Connecting To Source...", NDIsources[x].name)
+                recieveSource = NDIsources[ x ]
+                isAutoSet = True
 
         #wait key for NDI source
         #ndiindx = int(input('Select NDI source [number] :'))
 
-        if(len(NDIsources) == 1):
-            #If only one source, connect to that source
-            # recieveSource = NDIsources[ min(ndiindx, len(NDIsources) ) ]
-            recieveSource = NDIsources[ 0 ]
-            print("Automatically Connecting To Source...")
-        else:
-            awaitUserInput = True;
-            while(awaitUserInput):
-                print("")
-                try:
-                    key = int(input("Please choose a NDI Source Number to connect to:"))
-                    if(key < len(NDIsources) and key >= 0):
-                        awaitUserInput = False
-                        recieveSource = NDIsources[key]
-                    else:
+        if(isAutoSet == False):
+
+            if(len(NDIsources) == 1):
+                #If only one source, connect to that source
+                # recieveSource = NDIsources[ min(ndiindx, len(NDIsources) ) ]
+                recieveSource = NDIsources[ 0 ]
+                print("Automatically Connecting To Source...")
+            else:
+                awaitUserInput = True;
+                while(awaitUserInput):
+                    print("")
+                    try:
+                        key = int(input("Please choose a NDI Source Number to connect to:"))
+                        if(key < len(NDIsources) and key >= 0):
+                            awaitUserInput = False
+                            recieveSource = NDIsources[key]
+                        else:
+                            print("Input Not A Number OR Number not in NDI Range. Please pick a number between 0 and "+ str(len(NDIsources)-1))
+                    except:
                         print("Input Not A Number OR Number not in NDI Range. Please pick a number between 0 and "+ str(len(NDIsources)-1))
-                except:
-                    print("Input Not A Number OR Number not in NDI Range. Please pick a number between 0 and "+ str(len(NDIsources)-1))
 
             #If more than one source, ask user which NDI source they want to use
     else:
         print("No NDI Sources Detected - Please Try Again")
 
-    print("Width Resized To 500px. Not Actual Source Size")
     reciever = receiver.create_receiver(recieveSource)
 
 #loop for Avatarify
