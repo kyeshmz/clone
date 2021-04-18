@@ -48,6 +48,7 @@ osc_dispatcher = None
 osc_myserver = None
 osc_client  = None
 
+IS_MAIN_LOOP = True
 
 
 if _platform == 'darwin':
@@ -316,7 +317,6 @@ def loopAvatarify():
 
     # tt.tocp('crop')
 
-
     tt.tic()
     if find_keyframe:
         if is_new_frame_better(avatar, frame, predictor):
@@ -349,32 +349,32 @@ def loopAvatarify():
     # elif is_calibrated and cv2.getWindowProperty('avatarify_window1', cv2.WND_PROP_VISIBLE) < 1.0:
     #     return
 
-    if key == 27: # ESC
-        return
-    elif key == ord('d'):
-        cur_ava += 1
-        if cur_ava >= len(avatars):
-            cur_ava = 0
-        passthrough = False
-        change_avatar(predictor, avatars[cur_ava])
-    elif key == ord('a'):
-        cur_ava -= 1
-        if cur_ava < 0:
-            cur_ava = len(avatars) - 1
-        passthrough = False
-        change_avatar(predictor, avatars[cur_ava])
-    elif key == ord('x'):
-        predictor.reset_frames()
+    # if key == 27: # ESC
+    #     return
+    # elif key == ord('d'):
+    #     cur_ava += 1
+    #     if cur_ava >= len(avatars):
+    #         cur_ava = 0
+    #     passthrough = False
+    #     change_avatar(predictor, avatars[cur_ava])
+    # elif key == ord('a'):
+    #     cur_ava -= 1
+    #     if cur_ava < 0:
+    #         cur_ava = len(avatars) - 1
+    #     passthrough = False
+    #     change_avatar(predictor, avatars[cur_ava])
+    # elif key == ord('x'):
+    #     predictor.reset_frames()
 
-        if not is_calibrated:
-            cv2.namedWindow('avatarify_window1', cv2.WINDOW_AUTOSIZE)
-            # cv2.namedWindow('avatarify_window1', cv2.WINDOW_GUI_NORMAL)
-            cv2.moveWindow('avatarify_window1', 600, 250)
+    #     if not is_calibrated:
+    #         cv2.namedWindow('avatarify_window1', cv2.WINDOW_AUTOSIZE)
+    #         # cv2.namedWindow('avatarify_window1', cv2.WINDOW_GUI_NORMAL)
+    #         cv2.moveWindow('avatarify_window1', 600, 250)
 
-        is_calibrated = True
+    #     is_calibrated = True
 
-    elif key == ord('i'):
-        show_fps = not show_fps
+    # elif key == ord('i'):
+    #     show_fps = not show_fps
 
     # preview_frame = frame.copy()
 
@@ -417,15 +417,21 @@ def loopAvatarify():
 
 #this
 async def mainLoop():
+    global IS_MAIN_LOOP
     try:
-        while True:
+        while IS_MAIN_LOOP:
+            key = cv2.waitKey(1)
+            if key == 27: # ESC
+                print("mainLoop break")
+                IS_MAIN_LOOP = False
+                break
             loopAvatarify()
             await asyncio.sleep(0)
 
     except KeyboardInterrupt:
-        log("main: user interrupt")
+        print("main: user interrupt")
 
-    log("main: exit")
+    print("main: exit")
 
 async def init_main():
     global osc_client
@@ -522,15 +528,16 @@ def osc_messege_handler(unused_addr, *p):
     global avatars
     global avatar_names
     global receiver
+    global IS_MAIN_LOOP
+
+    print(unused_addr)
+    print('FPS : ', fps)
 
     try:
-        print('FPS : ', fps)
         if(p[0] == 'update_ndi'):
             tt = time.time()
             frame = reciever.read()
             frame = frame[..., :3][..., ::-1]
-            # print(frame.shape)
-            # print(type(frame))
             change_avatar(predictor, frame)
             tt = ( tt - time.time())
             print('osc : update_ndi', tt)
@@ -540,32 +547,39 @@ def osc_messege_handler(unused_addr, *p):
             predictor.reset_frames()
             is_calibrated = True
 
+        if(p[0] == 'inactive'):
+            print('inactivate predirection, wait untill calibrate')
+            is_calibrated = False
+
         if(p[0] == 'loadfaces'):
             print('osc : loadfaces')
             avatars, avatar_names = load_images()
 
-        if(p[0] == 'nextFace'):
-            print('switch to nextFace')
-            if cur_ava < len(avatars) - 1:
-                cur_ava += 1
-            change_avatar(predictor, avatars[cur_ava])
+        if(p[0] == 'destroy'):
+            print('osc : destroy')
+            IS_MAIN_LOOP = False
+        # if(p[0] == 'nextFace'):
+        #     print('switch to nextFace')
+        #     if cur_ava < len(avatars) - 1:
+        #         cur_ava += 1
+        #     change_avatar(predictor, avatars[cur_ava])
 
-        if(p[0] == 'prevFace'):
-            print('switch to nextFace')
-            if cur_ava > 0:
-                cur_ava -= 1
-            change_avatar(predictor, avatars[cur_ava])
+        # if(p[0] == 'prevFace'):
+        #     print('switch to nextFace')
+        #     if cur_ava > 0:
+        #         cur_ava -= 1
+        #     change_avatar(predictor, avatars[cur_ava])
 
-        if(p[0] == 'switchFace'):
-            print('switchFace')
-            _index = int(p[1])
+        # if(p[0] == 'switchFace'):
+        #     print('switchFace')
+        #     _index = int(p[1])
 
-            if _index < len(avatars) and _index >= 0:
-                cur_ava = _index
+        #     if _index < len(avatars) and _index >= 0:
+        #         cur_ava = _index
 
-                print(avatars[cur_ava].shape)
-                print(type(avatars[cur_ava]))
-                change_avatar(predictor, avatars[cur_ava])
+        #         print(avatars[cur_ava].shape)
+        #         print(type(avatars[cur_ava]))
+        #         change_avatar(predictor, avatars[cur_ava])
 
     # elif key == ord('a'):
     #     cur_ava -= 1
@@ -573,9 +587,6 @@ def osc_messege_handler(unused_addr, *p):
     #         cur_ava = len(avatars) - 1
     #     passthrough = False
     #     change_avatar(predictor, avatars[cur_ava])
-
-
-        print(unused_addr)
 
         # client.send_message("/message_echo", p)
 
@@ -609,5 +620,5 @@ if __name__ == "__main__":
     cv2.destroyAllWindows()
     predictor.stop()
 
-    log("main: exit")
+    print("-------- main: exit ------------ ")
     exit()
