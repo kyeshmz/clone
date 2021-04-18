@@ -21,6 +21,8 @@ import pynng
 import scipy.ndimage
 import torch
 import torchvision as tv
+import legacy
+
 import trio
 from PIL import Image, ImageDraw, ImageOps
 
@@ -48,24 +50,24 @@ def image_to_byte_array(image: Image):
     return imgByteArr
 
 
-def generate_zs_from_seeds(seeds):
-    zs = []
-    for seed_idx, seed in enumerate(seeds):
-        rnd = np.random.RandomState(seed)
-        z = rnd.randn(1, *Gs.input_shape[1:])
-        zs.append(z)
-    return zs
+# def generate_zs_from_seeds(seeds):
+#     zs = []
+#     for seed_idx, seed in enumerate(seeds):
+#         rnd = np.random.RandomState(seed)
+#         z = rnd.randn(1, *Gs.input_shape[1:])
+#         zs.append(z)
+#     return zs
 
 
-async def generate_images_from_ws(dlatents):
-    imgs = []
-    for row, dlatent in enumerate(dlatents):
-        img = Gs.components.synthesis.run(dlatent, **Gs_kwargs)
-        imgs.append(img[0])
-    return imgs
+# async def generate_images_from_ws(dlatents):
+#     imgs = []
+#     for row, dlatent in enumerate(dlatents):
+#         img = Gs.components.synthesis.run(dlatent, **Gs_kwargs)
+#         imgs.append(img[0])
+#     return imgs
 
 
-def generate_images_from_ws_array(dlatents):
+async def generate_images_from_ws_array(dlatents):
     "dlatentsはnp.arrayで，[steps, 18, 512]"
     dlatents = torch.tensor(dlatents, device=device)
     imgs = G.synthesis(dlatents,
@@ -232,7 +234,7 @@ async def recv_eternally(sock):
         # edited_dlatents = edited_dlatents.reshape(steps, 18, 512)
         print(edited_dlatents.shape)
 
-        imgs = await generate_images_from_ws(edited_dlatents)
+        imgs = await generate_images_from_ws_array(edited_dlatents)
         # 120x (1024,1024,3)
         generate_time = time.time()
 
@@ -313,10 +315,10 @@ linspace = np.linspace(0, 1.0, steps)
 print('linspace', linspace)
 linspace = linspace.reshape(-1, 1, 1).astype(np.float32)
 
-fromSeed = SEEDs[0]
-toSeed = SEEDs[1]
-seeds = [fromSeed, toSeed]
-zs = generate_zs_from_seeds(seeds)
+# fromSeed = SEEDs[0]
+# toSeed = SEEDs[1]
+# seeds = [fromSeed, toSeed]
+# zs = generate_zs_from_seeds(seeds)
 
 # end stylegan configs
 print('starting pytorch loads')
