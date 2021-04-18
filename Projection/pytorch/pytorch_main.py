@@ -25,10 +25,8 @@ import trio
 from PIL import Image, ImageDraw, ImageOps
 
 import dnnlib
-import dnnlib.tflib as tflib
-import pretrained_networks
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../lib/ps2p'))
 
 from imutils import face_utils
 
@@ -301,16 +299,8 @@ print('starting tensorflow load')
 td_addr = "tcp://172.25.111.30:5001"
 
 # start stylegan configs
-network_pkl = "networks/stylegan2-ffhq-config-f.pkl"
-print('Loading networks from "%s"...' % network_pkl)
-_G, _D, Gs = pretrained_networks.load_networks(network_pkl)
-noise_vars = [
-    var for name, var in Gs.components.synthesis.vars.items()
-    if name.startswith('noise')
-]
-
 device = torch.device('cuda')
-with dnnlib.util.open_url('./ffhq.pkl') as f:
+with dnnlib.util.open_url('../pretrained_models/ffhq.pkl') as f:
     G = legacy.load_network_pkl(f)['G_ema'].to(device)
 
 steps = 120
@@ -346,7 +336,7 @@ net.eval()
 net.to('cuda:0')
 face_detector = dlib.get_frontal_face_detector()
 face_predictor = dlib.shape_predictor(
-    './shape_predictor_68_face_landmarks.dat')
+    '../pretrained_models/shape_predictor_68_face_landmarks.dat')
 addr = ""
 
 if __name__ == '__main__':
