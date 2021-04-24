@@ -15,7 +15,7 @@ if 'TouchDesigner.exe' in dict_pids.values():
     pass
 else:
 	print('starting 1')
-	first = r'./B1_MI_AvtBridge_2.toe'
+	first = r'C:\Users\shuni\Dropbox\Project\66_MorphingIdentity\1_dev\7_MorphingIdentity\MorphingIdentity\Main\B1_MI_AvtBridge_2.toe'
 	subprocess.Popen(['start', first], shell=True)
 	print('end 1')
 	print('Restarted TouchDesigner.')
