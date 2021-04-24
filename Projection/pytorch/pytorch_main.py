@@ -1,3 +1,4 @@
+# import argparse
 import base64
 import glob
 import io
@@ -7,8 +8,6 @@ import pickle
 import re
 import sys
 import time
-import argparse
-
 from math import ceil
 
 import curio
@@ -21,17 +20,15 @@ import pynng
 import scipy.ndimage
 import torch
 import torchvision as tv
-import legacy
-
 import trio
 from PIL import Image, ImageDraw, ImageOps
 
 import dnnlib
+import legacy
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib/ps2p'))
 
 from imutils import face_utils
-
 from models.psp import pSp
 from utils.common import tensor2im
 
@@ -48,23 +45,6 @@ def image_to_byte_array(image: Image):
     image.save(imgByteArr, format='JPEG')
     imgByteArr = imgByteArr.getvalue()
     return imgByteArr
-
-
-# def generate_zs_from_seeds(seeds):
-#     zs = []
-#     for seed_idx, seed in enumerate(seeds):
-#         rnd = np.random.RandomState(seed)
-#         z = rnd.randn(1, *Gs.input_shape[1:])
-#         zs.append(z)
-#     return zs
-
-
-# async def generate_images_from_ws(dlatents):
-#     imgs = []
-#     for row, dlatent in enumerate(dlatents):
-#         img = Gs.components.synthesis.run(dlatent, **Gs_kwargs)
-#         imgs.append(img[0])
-#     return imgs
 
 
 async def generate_images_from_ws_array(dlatents):
@@ -228,13 +208,19 @@ async def recv_eternally(sock):
         dlatent_morph = (dlatent_to - dlatent_from)
         print(np.linalg.norm(dlatent_morph))
 
-        edited_dlatents = dlatent_from + linspace * dlatent_morph
-        edited_dlatents = edited_dlatents.reshape(steps, 18, 512)
+        edited_dlatents = np.stack((dlatent_from, dlatent_to))
+        edited_dlatents = torch.tensor(edited_dlatents, device=device)
+        imgs = G.synthesis(edited_dlatents, noise_mode='const')
+        imgs = (imgs.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(
+            torch.uint8)
+
+        # edited_dlatents = dlatent_from + linspace * dlatent_morph
+        # edited_dlatents = edited_dlatents.reshape(steps, 18, 512)
         # for making faster, but still gpu problem
         # edited_dlatents = edited_dlatents.reshape(steps, 18, 512)
         print(edited_dlatents.shape)
 
-        imgs = await generate_images_from_ws_array(edited_dlatents)
+        # imgs = await generate_images_from_ws_array(edited_dlatents)
         # 120x (1024,1024,3)
         generate_time = time.time()
 
@@ -268,7 +254,7 @@ async def main():
 
     td_addr = "tcp://172.25.111.30:5001"
 
-    print('starting pynng, listening to ', args.ip)
+    print('starting pynng, listening to', td_addr)
 
     with pynng.Pair1(polyamorous=True) as sock:
         async with trio.open_nursery() as n:
@@ -287,16 +273,8 @@ async def main():
             n.start_soon(recv_eternally, sock)
 
 
-p = argparse.ArgumentParser(description=__doc__)
-p.add_argument(
-    '--ip',
-    help='Address we are getting images from; e.g. tcp://127.0.0.1:13134',
-    nargs='?',
-    const='172.25.111.30')
-args = p.parse_args()
-
 print('starting')
-print('starting tensorflow load')
+print('starting pytorch stylegan load')
 
 td_addr = "tcp://172.25.111.30:5001"
 
@@ -308,17 +286,10 @@ with dnnlib.util.open_url('../pretrained_models/ffhq.pkl') as f:
 steps = 120
 H = W = 256
 
-SEEDs = [4336458, 222181]
-
 # linspace
-linspace = np.linspace(0, 1.0, steps)
-print('linspace', linspace)
-linspace = linspace.reshape(-1, 1, 1).astype(np.float32)
-
-# fromSeed = SEEDs[0]
-# toSeed = SEEDs[1]
-# seeds = [fromSeed, toSeed]
-# zs = generate_zs_from_seeds(seeds)
+# linspace = np.linspace(0, 1.0, steps)
+# print('linspace', linspace)
+# linspace = linspace.reshape(-1, 1, 1).astype(np.float32)
 
 # end stylegan configs
 print('starting pytorch loads')
