@@ -1,3 +1,4 @@
+import argparse
 import base64
 import glob
 import io
@@ -7,8 +8,6 @@ import pickle
 import re
 import sys
 import time
-import argparse
-
 from math import ceil
 
 import curio
@@ -28,10 +27,11 @@ import dnnlib
 import dnnlib.tflib as tflib
 import pretrained_networks
 
+# from pythonosc import udp_client
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from imutils import face_utils
-
 from models.psp import pSp
 from utils.common import tensor2im
 
@@ -186,104 +186,105 @@ async def recv_eternally(sock):
         st = time.time()
 
         # Alignment
-        from_face = face_detector(from_NP, 1)
-        from_landmarks = face_predictor(from_NP, from_face[0])
-        from_landmarks = face_utils.shape_to_np(from_landmarks)
-        from_alignimg = await image_align(from_PIL, from_landmarks)
-        from_alignimg64 = base64.b64encode(image_to_byte_array(from_alignimg))
-        from_alignimgnp = await pil_to_numpy(from_alignimg)
-        # from_alignimgnp = from_alignimg
+        try:
+            from_face = face_detector(from_NP, 1)
+            if (len(from_face) == 0 ):
+                return
+            from_landmarks = face_predictor(from_NP, from_face[0])
+            from_landmarks = face_utils.shape_to_np(from_landmarks)
+            from_alignimg = await image_align(from_PIL, from_landmarks)
+            from_alignimg64 = base64.b64encode(
+                image_to_byte_array(from_alignimg))
+            from_alignimgnp = await pil_to_numpy(from_alignimg)
+            # from_alignimgnp = from_alignimg
 
-        to_face = face_detector(to_NP, 1)
-        to_landmarks = face_predictor(to_NP, to_face[0])
-        to_landmarks = face_utils.shape_to_np(to_landmarks)
-        to_alignimg = await image_align(to_PIL, to_landmarks)
-        to_alignimg64 = base64.b64encode(image_to_byte_array(to_alignimg))
-        to_alignimgnp = await pil_to_numpy(to_alignimg)
-        # to_alignimgnp = from_alignimg
+            to_face = face_detector(to_NP, 1)
+            to_landmarks = face_predictor(to_NP, to_face[0])
+            to_landmarks = face_utils.shape_to_np(to_landmarks)
+            to_alignimg = await image_align(to_PIL, to_landmarks)
+            to_alignimg64 = base64.b64encode(image_to_byte_array(to_alignimg))
+            to_alignimgnp = await pil_to_numpy(to_alignimg)
+            # to_alignimgnp = from_alignimg
 
-        ed = time.time()
-        print(f'align {ed-st:.2f}', end=', ')
-        # Embedding
-        from_embedimg = transform(from_alignimg).unsqueeze(0)
-        from_projimg, from_latents = net(from_embedimg.to('cuda:0').float(),
+            ed = time.time()
+            print(f'align {ed-st:.2f}', end=', ')
+            # Embedding
+            from_embedimg = transform(from_alignimg).unsqueeze(0)
+            from_projimg, from_latents = net(
+                from_embedimg.to('cuda:0').float(),
+                return_latents=True,
+                randomize_noise=False)
+            from_latents = from_latents.to('cpu').detach().numpy()
+
+            to_embedimg = transform(to_alignimg).unsqueeze(0)
+            to_projimg, to_latents = net(to_embedimg.to('cuda:0').float(),
                                          return_latents=True,
                                          randomize_noise=False)
-        from_latents = from_latents.to('cpu').detach().numpy()
+            to_latents = to_latents.to('cpu').detach().numpy()
+            embed_time = time.time()
+            print(f'embed {embed_time-ed:.2f}')
 
-        to_embedimg = transform(to_alignimg).unsqueeze(0)
-        to_projimg, to_latents = net(to_embedimg.to('cuda:0').float(),
-                                     return_latents=True,
-                                     randomize_noise=False)
-        to_latents = to_latents.to('cpu').detach().numpy()
-        embed_time = time.time()
-        print(f'embed {embed_time-ed:.2f}')
+            #  start of tensorlfow
+            #W space vector
+            dlatent_from = from_latents
+            print(dlatent_from.shape)
+            dlatent_to = to_latents
+            print(dlatent_to.shape)
 
-        #  start of tensorlfow
-        #W space vector
-        dlatent_from = from_latents
-        print(dlatent_from.shape)
-        dlatent_to = to_latents
-        print(dlatent_to.shape)
+            dlatent_morph = (dlatent_to - dlatent_from)
+            print(np.linalg.norm(dlatent_morph))
 
-        dlatent_morph = (dlatent_to - dlatent_from)
-        print(np.linalg.norm(dlatent_morph))
+            edited_dlatents = dlatent_from + linspace * dlatent_morph
+            edited_dlatents = edited_dlatents.reshape(steps, 1, 18, 512)
+            # for making faster, but still gpu problem
+            # edited_dlatents = edited_dlatents.reshape(steps, 18, 512)
+            print(edited_dlatents.shape)
 
-        edited_dlatents = dlatent_from + linspace * dlatent_morph
-        edited_dlatents = edited_dlatents.reshape(steps, 1, 18, 512)
-        # for making faster, but still gpu problem
-        # edited_dlatents = edited_dlatents.reshape(steps, 18, 512)
-        print(edited_dlatents.shape)
+            imgs = await generate_images_from_ws(edited_dlatents)
+            # 120x (1024,1024,3)
+            generate_time = time.time()
 
-        imgs = await generate_images_from_ws(edited_dlatents)
-        # 120x (1024,1024,3)
-        generate_time = time.time()
+            print(f'generate {generate_time-embed_time:.2f}')
+            morph_images = []
 
-        print(f'generate {generate_time-embed_time:.2f}')
-        morph_images = []
+            p = multiprocessing.Pool(16)
+            morph_images = p.map(resize, imgs)
+            morph_images = [
+                entry for sublist in morph_images for entry in sublist
+            ]
+            p.close()
+            p.join()
 
-        p = multiprocessing.Pool(16)
-        morph_images = p.map(resize, imgs)
-        morph_images = [entry for sublist in morph_images for entry in sublist]
-        p.close()
-        p.join()
-
-        print(f'creation {time.time()-generate_time:.2f}')
-        # sending
-        send_data = {
-            "aligned_from": from_alignimgnp,
-            "aligned_to": to_alignimgnp,
-            "morphing_images": morph_images
-        }
-        send_data_pkl = pickle.dumps(send_data)
-        print('sending')
-        print('morph length', len(morph_images))
-        sock.send(send_data_pkl)
-        # for pipe in sock.pipes:
-        # await pipe.asend(send_data_pkl)
-        print('done sending')
-        print(f'total time {time.time()-recieved_time:.2f}')
+            print(f'creation {time.time()-generate_time:.2f}')
+            # sending
+            send_data = {
+                "aligned_from": from_alignimgnp,
+                "aligned_to": to_alignimgnp,
+                "morphing_images": morph_images
+            }
+            send_data_pkl = pickle.dumps(send_data)
+            print('sending')
+            print('morph length', len(morph_images))
+            sock.send(send_data_pkl)
+            # for pipe in sock.pipes:
+            # await pipe.asend(send_data_pkl)
+            print('done sending')
+            print(f'total time {time.time()-recieved_time:.2f}')
+        except:
+            # client = udp_client.SimpleUDPClient("192.168.10.100", 4000)
+            # client.send_message("/error", 1)
+            print('error')
+            continue
 
 
 async def main():
 
-    td_addr = "tcp://172.25.111.30:5001"
+    td_addr = "tcp://192.168.10,100:5001"
 
     print('starting pynng, listening to ', args.ip)
 
     with pynng.Pair1(polyamorous=True) as sock:
         async with trio.open_nursery() as n:
-
-            def pre_connect_cb(pipe):
-                addr = str(pipe.remote_address)
-                print('~~~~got connection from {}'.format(addr))
-
-            def post_remove_cb(pipe):
-                addr = str(pipe.remote_address)
-                print('~~~~goodbye for now from {}'.format(addr))
-
-            sock.add_pre_pipe_connect_cb(pre_connect_cb)
-            sock.add_post_pipe_remove_cb(post_remove_cb)
             sock.dial(td_addr)
             n.start_soon(recv_eternally, sock)
 
@@ -293,13 +294,15 @@ p.add_argument(
     '--ip',
     help='Address we are getting images from; e.g. tcp://127.0.0.1:13134',
     nargs='?',
-    const='172.25.111.30')
+    const='192.168.10.100')
 args = p.parse_args()
 
 print('starting')
 print('starting tensorflow load')
 
-td_addr = "tcp://172.25.111.30:5001"
+td_addr = "tcp://192.168.10.100:5001"
+# client = udp_client.SimpleUDPClient("192.168.10.100", 3000)
+# client.send_message("/start", 1)
 
 # start stylegan configs
 network_pkl = "networks/stylegan2-ffhq-config-f.pkl"
