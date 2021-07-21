@@ -18,6 +18,8 @@ from ndi import finder
 from ndi import receiver
 from ndi import lib
 
+import torch
+
 # Spout load library
 from spout import Spout
 #OSC
@@ -118,11 +120,14 @@ def load_images(IMG_SIZE = 256):
 
 
 def change_avatar(predictor, new_avatar):
-    global avatar, avatar_kp, kp_source
-    avatar_kp = predictor.get_frame_kp(new_avatar)
-    kp_source = None
-    avatar = new_avatar
-    predictor.set_source_image(avatar)
+    global avatar, avatar_kp, kp_source, is_avaloaded
+
+    with torch.cuda.device(1):
+        avatar_kp = predictor.get_frame_kp(new_avatar)
+        kp_source = None
+        avatar = new_avatar
+        predictor.set_source_image(avatar)
+        is_avaloaded = True
 
 
 def draw_rect(img, rw=0.6, rh=0.8, color=(255, 0, 0), thickness=2):
@@ -177,6 +182,7 @@ cur_ava = 0
 avatar = None
 avatar_names = None
 is_calibrated = False
+is_avaloaded = False
 fps_hist = []
 fps = 0
 
@@ -269,6 +275,7 @@ def loopAvatarify():
     global reciever
     global IMG_SIZE
     global is_calibrated
+    global is_avaloaded
 
     global cur_ava
     global avatar
@@ -330,7 +337,7 @@ def loopAvatarify():
     # if passthrough:
     #     out = frame
     # el
-    if is_calibrated:
+    if is_calibrated and is_avaloaded:
         tt.tic()
         out = predictor.predict(frame)
         if out is None:
@@ -476,13 +483,16 @@ def initAvatarify():
     global display_string
     display_string = ""
 
+    switchCudeDeviceName = 'cuda:' + str(int(opt.instance_id - 1))
+
     log('Loading Predictor')
     predictor_args = {
         'config_path': opt.config,
         'checkpoint_path': opt.checkpoint,
         'relative': opt.relative,
         'adapt_movement_scale': opt.adapt_scale,
-        'enc_downscale': opt.enc_downscale
+        'enc_downscale': opt.enc_downscale,
+        'cuda_device': switchCudeDeviceName
     }
 
     #loading local predictor
