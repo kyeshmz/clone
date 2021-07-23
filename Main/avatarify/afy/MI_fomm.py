@@ -484,6 +484,7 @@ def initAvatarify():
     display_string = ""
 
     switchCudeDeviceName = 'cuda:' + str(int(opt.instance_id - 1))
+    switchCudeDeviceName = 'cuda:1'
 
     log('Loading Predictor')
     predictor_args = {
