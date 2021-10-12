@@ -15,8 +15,11 @@ def to_tensor(a):
 
 
 class PredictorLocal:
-    def __init__(self, config_path, checkpoint_path, relative=False, adapt_movement_scale=False, device=None, enc_downscale=1):
-        self.device = 'cuda'
+    def __init__(self, config_path, checkpoint_path, relative=False, adapt_movement_scale=False, device=None, enc_downscale=1, cuda_device='cuda:0'):
+        
+        torch.device(cuda_device)
+        self.device = cuda_device    
+        #self.device = 'cuda'
         #device or ('cuda' if torch.cuda.is_available() else 'cpu')
         print('***************self.device = ', self.device)
         self.relative = relative
@@ -57,6 +60,7 @@ class PredictorLocal:
         self.kp_driving_initial = None
 
     def set_source_image(self, source_image):
+        print('self.device ---------->', self.device)
         self.source = to_tensor(source_image).to(self.device)
         self.kp_source = self.kp_detector(self.source)
 
