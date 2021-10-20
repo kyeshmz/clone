@@ -122,7 +122,7 @@ def load_images(IMG_SIZE = 256):
 def change_avatar(predictor, new_avatar):
     global avatar, avatar_kp, kp_source, is_avaloaded
 
-    with torch.cuda.device(1):
+    with torch.cuda.device(0):
         avatar_kp = predictor.get_frame_kp(new_avatar)
         kp_source = None
         avatar = new_avatar
