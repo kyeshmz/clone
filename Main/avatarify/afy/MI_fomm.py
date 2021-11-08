@@ -52,6 +52,7 @@ osc_client  = None
 
 IS_MAIN_LOOP = True
 
+#CUDADEVICE
 
 if _platform == 'darwin':
     if not opt.is_client:
@@ -121,8 +122,8 @@ def load_images(IMG_SIZE = 256):
 
 def change_avatar(predictor, new_avatar):
     global avatar, avatar_kp, kp_source, is_avaloaded
-
-    with torch.cuda.device(0):
+  
+    with torch.cuda.device( int(opt.cuda_id) ):      
         avatar_kp = predictor.get_frame_kp(new_avatar)
         kp_source = None
         avatar = new_avatar
@@ -483,8 +484,9 @@ def initAvatarify():
     global display_string
     display_string = ""
 
-    switchCudeDeviceName = 'cuda:' + str(int(opt.instance_id - 1))
-    switchCudeDeviceName = 'cuda:0'
+    # # switchCudeDeviceName = 'cuda:' + str(int(opt.instance_id - 1))
+    switchCudeDeviceName = 'cuda:' + str(int(opt.cuda_id))
+    # # switchCudeDeviceName = 'cuda:0'
 
     log('Loading Predictor')
     predictor_args = {
