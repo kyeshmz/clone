@@ -8,33 +8,37 @@ import pickle
 import re
 import sys
 import time
+import typing
 from math import ceil
+from pythonosc.udp_client import SimpleUDPClient
+from pythonosc.osc_server import AsyncIOOSCUDPServer
 
-import curio
-import cv2
 import dlib
-import imageio
 import IPython.display
 import numpy as np
 import pynng
 import scipy.ndimage
 import torch
+import asyncio
 import torchvision as tv
 import trio
+import socket
+from pythonosc import dispatcher
+from pythonosc import osc_server
 from PIL import Image, ImageDraw, ImageOps
+from imutils import face_utils
+
+# we assume the following directory format
+# Projection
+# 11_src
+# --22_lib
+# ----ps2p files
+# ----stylegan2 files
+
+from lib.ps2p.models.psp import pSp
 
 import dnnlib
 import dnnlib.tflib as tflib
-import pretrained_networks
-
-# from pythonosc import udp_client
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from imutils import face_utils
-from models.psp import pSp
-from utils.common import tensor2im
-
 
 async def pil_to_numpy(image: Image):
     image = image.convert("RGB")
@@ -162,6 +166,30 @@ def resize(img):
     return imglist
 
 
+gdrive_urls = {
+    'gdrive:networks/stylegan2-ffhq-config-f.pkl':                          'https://nvlabs-fi-cdn.nvidia.com/stylegan2/networks/stylegan2-ffhq-config-f.pkl',
+}
+
+def get_path_or_url(path_or_gdrive_path):
+    return gdrive_urls.get(path_or_gdrive_path, path_or_gdrive_path)
+_cached_networks = dict()
+
+def load_networks(path_or_gdrive_path):
+    path_or_url = get_path_or_url(path_or_gdrive_path)
+    if path_or_url in _cached_networks:
+        return _cached_networks[path_or_url]
+
+    if dnnlib.util.is_url(path_or_url):
+        stream = dnnlib.util.open_url(path_or_url, cache_dir='.stylegan2-cache')
+    else:
+        stream = open(path_or_url, 'rb')
+
+    tflib.init_tf()
+    with stream:
+        G, D, Gs = pickle.load(stream, encoding='latin1')
+    _cached_networks[path_or_url] = G, D, Gs
+    return G, D, Gs
+
 async def recv_eternally(sock):
     while True:
         all_st = time.time()
@@ -271,15 +299,14 @@ async def recv_eternally(sock):
             print('done sending')
             print(f'total time {time.time()-recieved_time:.2f}')
         except:
-            # client = udp_client.SimpleUDPClient("192.168.10.100", 4000)
-            # client.send_message("/error", 1)
+            client = SimpleUDPClient(td_addr, 4000)
+            client.send_message("/error", 1)
             print('error')
             continue
 
 
 async def main():
 
-    td_addr = "tcp://192.168.10,100:5001"
 
     print('starting pynng, listening to ', args.ip)
 
@@ -300,14 +327,14 @@ args = p.parse_args()
 print('starting')
 print('starting tensorflow load')
 
-td_addr = "tcp://192.168.10.100:5001"
+td_addr = "tcp://172.25.29.148:5001"
 # client = udp_client.SimpleUDPClient("192.168.10.100", 3000)
 # client.send_message("/start", 1)
 
 # start stylegan configs
-network_pkl = "networks/stylegan2-ffhq-config-f.pkl"
+network_pkl = "lib/stylegan2/networks/stylegan2-ffhq-config-f.pkl"
 print('Loading networks from "%s"...' % network_pkl)
-_G, _D, Gs = pretrained_networks.load_networks(network_pkl)
+_G, _D, Gs = load_networks(network_pkl)
 noise_vars = [
     var for name, var in Gs.components.synthesis.vars.items()
     if name.startswith('noise')
@@ -322,7 +349,7 @@ batchsize = 15
 # max is 20
 Gs_kwargs.minibatch_size = batchsize
 
-steps = 120
+steps = 30
 H = W = 256
 
 SEEDs = [4336458, 222181]
@@ -346,7 +373,7 @@ transform = tv.transforms.Compose([
 ])
 
 #  Load Pretrained Model
-model_path = '../pretrained_models/psp_ffhq_encode.pt'
+model_path = './lib/ps2p/pretrained_models/psp_ffhq_encode.pt'
 opts = torch.load(model_path, map_location='cuda:0')['opts']
 opts['checkpoint_path'] = model_path
 # if 'learn_in_w' not in opts: opts['learn_in_w'] = False
@@ -355,8 +382,7 @@ net.eval()
 net.to('cuda:0')
 face_detector = dlib.get_frontal_face_detector()
 face_predictor = dlib.shape_predictor(
-    './shape_predictor_68_face_landmarks.dat')
-addr = ""
+    './lib/dlib/shape_predictor_68_face_landmarks.dat')
 
 if __name__ == '__main__':
     try:
