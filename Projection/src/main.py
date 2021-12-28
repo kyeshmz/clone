@@ -40,6 +40,9 @@ from lib.ps2p.models.psp import pSp
 import dnnlib
 import dnnlib.tflib as tflib
 
+
+td_addr = "tcp://172.25.29.148:5001"
+
 async def pil_to_numpy(image: Image):
     image = image.convert("RGB")
     image = np.array(image, dtype=np.float32)
@@ -327,7 +330,6 @@ args = p.parse_args()
 print('starting')
 print('starting tensorflow load')
 
-td_addr = "tcp://172.25.29.148:5001"
 # client = udp_client.SimpleUDPClient("192.168.10.100", 3000)
 # client.send_message("/start", 1)
 
