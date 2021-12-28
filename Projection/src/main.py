@@ -42,6 +42,7 @@ import dnnlib.tflib as tflib
 
 
 td_addr = "tcp://172.25.29.148:5001"
+steps = 30
 
 async def pil_to_numpy(image: Image):
     image = image.convert("RGB")
@@ -351,7 +352,7 @@ batchsize = 15
 # max is 20
 Gs_kwargs.minibatch_size = batchsize
 
-steps = 30
+
 H = W = 256
 
 SEEDs = [4336458, 222181]
