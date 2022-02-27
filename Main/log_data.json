@@ -1,54 +1,54 @@
 {
-    "0000": {
-        "date": "20220226",
+    "0001": {
+        "date": "20220227",
         "session": [
             {
                 "user1": {
-                    "id": "20220226184043A",
-                    "npy": "20220226184043A.npy",
-                    "time": "20220226184043",
+                    "id": "20220227135233A",
+                    "npy": "20220227135233A.npy",
+                    "time": "20220227135233",
                     "pedal_input": 1,
                     "Pair": "testA.png",
                     "dw": 150.5,
-                    "SelfRate_FromOther": 0.4211201071739197,
-                    "SelfRate_FromSelf": 0.0
+                    "SelfRate_FromSelf": 0.32270216941833496,
+                    "SelfRate_FromOther": 0.39800891280174255
                 },
                 "user2": {
-                    "id": "20220226184043B",
-                    "npy": "20220226184043B.npy",
-                    "time": "20220226184043",
+                    "id": "20220227135233B",
+                    "npy": "20220227135233B.npy",
+                    "time": "20220227135233",
                     "pedal_input": 1,
                     "Pair": "testB.png",
                     "dw": 150.5,
-                    "SelfRate_FromOther": 0.32938671112060547,
-                    "SelfRate_FromSelf": 0.0
+                    "SelfRate_FromSelf": 0.3611021339893341,
+                    "SelfRate_FromOther": 0.33187562227249146
                 }
             }
         ]
     },
-    "0001": {
-        "date": "20220226",
+    "0002": {
+        "date": "20220227",
         "session": [
             {
                 "user1": {
-                    "id": "20220226184304A",
-                    "npy": "20220226184304A.npy",
-                    "time": "20220226184304",
+                    "id": "20220227135455A",
+                    "npy": "20220227135455A.npy",
+                    "time": "20220227135455",
                     "pedal_input": 1,
                     "Pair": "testA.png",
                     "dw": 150.5,
-                    "SelfRate_FromOther": 0.4211201071739197,
-                    "SelfRate_FromSelf": 0.0
+                    "SelfRate_FromSelf": 0.32270216941833496,
+                    "SelfRate_FromOther": 0.39800891280174255
                 },
                 "user2": {
-                    "id": "20220226184304B",
-                    "npy": "20220226184304B.npy",
-                    "time": "20220226184304",
+                    "id": "20220227135455B",
+                    "npy": "20220227135455B.npy",
+                    "time": "20220227135455",
                     "pedal_input": 1,
                     "Pair": "testB.png",
                     "dw": 150.5,
-                    "SelfRate_FromOther": 0.32938671112060547,
-                    "SelfRate_FromSelf": 0.0
+                    "SelfRate_FromSelf": 0.3611021339893341,
+                    "SelfRate_FromOther": 0.33187562227249146
                 }
             }
         ]
