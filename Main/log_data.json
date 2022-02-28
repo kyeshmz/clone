@@ -1,56 +1,27 @@
 {
-    "20220227143014": {
-        "date": "20220227143014",
-        "session": [
-            {
-                "user1": {
-                    "id": "20220227143014A",
-                    "npy": "20220227143014A.npy",
-                    "time": "20220227143014",
-                    "pedal_input": 1,
-                    "Pair": "testA.png",
-                    "dw": 150.5,
-                    "SelfRate_FromSelf": 0.32270216941833496,
-                    "SelfRate_FromOther": 0.39800891280174255
-                },
-                "user2": {
-                    "id": "20220227143014B",
-                    "npy": "20220227143014B.npy",
-                    "time": "20220227143014",
-                    "pedal_input": 1,
-                    "Pair": "testB.png",
-                    "dw": 150.5,
-                    "SelfRate_FromSelf": 0.3611021339893341,
-                    "SelfRate_FromOther": 0.33187562227249146
-                }
+    "date": "20220228224727",
+    "session": [
+        {
+            "user1": {
+                "id": "20220228224727_A",
+                "npy": "20220228224727_A.npy",
+                "time": "20220228224727",
+                "pedal_input": 1,
+                "Pair": "testA.png",
+                "dw": 150.5,
+                "SelfRate_FromSelf": 0.32270216941833496,
+                "SelfRate_FromOther": 0.39800891280174255
+            },
+            "user2": {
+                "id": "20220228224727_B",
+                "npy": "20220228224727_B.npy",
+                "time": "20220228224727",
+                "pedal_input": 1,
+                "Pair": "testB.png",
+                "dw": 150.5,
+                "SelfRate_FromSelf": 0.3611021339893341,
+                "SelfRate_FromOther": 0.33187562227249146
             }
-        ]
-    },
-    "20220227143236": {
-        "date": "20220227143236",
-        "session": [
-            {
-                "user1": {
-                    "id": "20220227143236A",
-                    "npy": "20220227143236A.npy",
-                    "time": "20220227143236",
-                    "pedal_input": 1,
-                    "Pair": "testA.png",
-                    "dw": 150.5,
-                    "SelfRate_FromSelf": 0.32270216941833496,
-                    "SelfRate_FromOther": 0.39800891280174255
-                },
-                "user2": {
-                    "id": "20220227143236B",
-                    "npy": "20220227143236B.npy",
-                    "time": "20220227143236",
-                    "pedal_input": 1,
-                    "Pair": "testB.png",
-                    "dw": 150.5,
-                    "SelfRate_FromSelf": 0.3611021339893341,
-                    "SelfRate_FromOther": 0.33187562227249146
-                }
-            }
-        ]
-    }
+        }
+    ]
 }
