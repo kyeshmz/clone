@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import base64
 import glob
 import io
@@ -6,12 +7,11 @@ import multiprocessing
 import os
 import pickle
 import re
+import socket
 import sys
 import time
 import typing
 from math import ceil
-from pythonosc.udp_client import SimpleUDPClient
-from pythonosc.osc_server import AsyncIOOSCUDPServer
 
 import dlib
 import IPython.display
@@ -19,14 +19,17 @@ import numpy as np
 import pynng
 import scipy.ndimage
 import torch
-import asyncio
 import torchvision as tv
 import trio
-import socket
-from pythonosc import dispatcher
-from pythonosc import osc_server
-from PIL import Image, ImageDraw, ImageOps
 from imutils import face_utils
+from PIL import Image, ImageDraw, ImageOps
+from pythonosc import dispatcher, osc_server
+from pythonosc.osc_server import AsyncIOOSCUDPServer
+from pythonosc.udp_client import SimpleUDPClient
+
+import dnnlib
+import dnnlib.tflib as tflib
+from lib.ps2p.models.psp import pSp
 
 # we assume the following directory format
 # Projection
@@ -35,10 +38,7 @@ from imutils import face_utils
 # ----ps2p files
 # ----stylegan2 files
 
-from lib.ps2p.models.psp import pSp
 
-import dnnlib
-import dnnlib.tflib as tflib
 
 
 td_addr = "tcp://172.25.29.148:5001"
@@ -290,6 +290,7 @@ async def recv_eternally(sock):
             print(f'creation {time.time()-generate_time:.2f}')
             # sending
             send_data = {
+                "dw": np.linalg.norm(dlatent_morph),
                 "aligned_from": from_alignimgnp,
                 "aligned_to": to_alignimgnp,
                 "morphing_images": morph_images
@@ -310,23 +311,13 @@ async def recv_eternally(sock):
 
 
 async def main():
-
-
-    print('starting pynng, listening to ', args.ip)
-
     with pynng.Pair1(polyamorous=True) as sock:
         async with trio.open_nursery() as n:
             sock.dial(td_addr)
             n.start_soon(recv_eternally, sock)
 
 
-p = argparse.ArgumentParser(description=__doc__)
-p.add_argument(
-    '--ip',
-    help='Address we are getting images from; e.g. tcp://127.0.0.1:13134',
-    nargs='?',
-    const='192.168.10.100')
-args = p.parse_args()
+
 
 print('starting')
 print('starting tensorflow load')
