@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import base64
+import datetime
 import glob
 import io
 import multiprocessing
@@ -39,10 +40,9 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
-
-
 td_addr = "tcp://172.25.29.148:5001"
 steps = 30
+
 
 async def pil_to_numpy(image: Image):
     image = image.convert("RGB")
@@ -174,9 +174,13 @@ gdrive_urls = {
     'gdrive:networks/stylegan2-ffhq-config-f.pkl':                          'https://nvlabs-fi-cdn.nvidia.com/stylegan2/networks/stylegan2-ffhq-config-f.pkl',
 }
 
+
 def get_path_or_url(path_or_gdrive_path):
     return gdrive_urls.get(path_or_gdrive_path, path_or_gdrive_path)
+
+
 _cached_networks = dict()
+
 
 def load_networks(path_or_gdrive_path):
     path_or_url = get_path_or_url(path_or_gdrive_path)
@@ -184,7 +188,8 @@ def load_networks(path_or_gdrive_path):
         return _cached_networks[path_or_url]
 
     if dnnlib.util.is_url(path_or_url):
-        stream = dnnlib.util.open_url(path_or_url, cache_dir='.stylegan2-cache')
+        stream = dnnlib.util.open_url(
+            path_or_url, cache_dir='.stylegan2-cache')
     else:
         stream = open(path_or_url, 'rb')
 
@@ -193,6 +198,7 @@ def load_networks(path_or_gdrive_path):
         G, D, Gs = pickle.load(stream, encoding='latin1')
     _cached_networks[path_or_url] = G, D, Gs
     return G, D, Gs
+
 
 async def recv_eternally(sock):
     while True:
@@ -220,7 +226,7 @@ async def recv_eternally(sock):
         # Alignment
         try:
             from_face = face_detector(from_NP, 1)
-            if (len(from_face) == 0 ):
+            if (len(from_face) == 0):
                 return
             from_landmarks = face_predictor(from_NP, from_face[0])
             from_landmarks = face_utils.shape_to_np(from_landmarks)
@@ -257,7 +263,7 @@ async def recv_eternally(sock):
             print(f'embed {embed_time-ed:.2f}')
 
             #  start of tensorlfow
-            #W space vector
+            # W space vector
             dlatent_from = from_latents
             print(dlatent_from.shape)
             dlatent_to = to_latents
@@ -291,6 +297,7 @@ async def recv_eternally(sock):
             # sending
             send_data = {
                 "dw": np.linalg.norm(dlatent_morph),
+                "timestamp": "{:%Y%m%d}".format(datetime.datetime.now()),
                 "aligned_from": from_alignimgnp,
                 "aligned_to": to_alignimgnp,
                 "morphing_images": morph_images
@@ -315,8 +322,6 @@ async def main():
         async with trio.open_nursery() as n:
             sock.dial(td_addr)
             n.start_soon(recv_eternally, sock)
-
-
 
 
 print('starting')
