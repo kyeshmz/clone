@@ -40,8 +40,9 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
-td_addr = "tcp://172.25.29.148:5001"
-steps = 30
+td_addr = "tcp://192.168.10.100:5001"
+// original is step 100
+steps = 100
 
 
 async def pil_to_numpy(image: Image):
@@ -318,12 +319,20 @@ async def recv_eternally(sock):
 
 
 async def main():
+    print('starting pynng, listening to ', args.ip)
     with pynng.Pair1(polyamorous=True) as sock:
         async with trio.open_nursery() as n:
             sock.dial(td_addr)
             n.start_soon(recv_eternally, sock)
 
 
+p = argparse.ArgumentParser(description=__doc__)
+p.add_argument(
+    '--ip',
+    help='Address we are getting images from; e.g. tcp://127.0.0.1:13134',
+    nargs='?',
+    const='192.168.10.100')
+args = p.parse_args()
 print('starting')
 print('starting tensorflow load')
 
