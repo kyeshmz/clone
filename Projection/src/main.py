@@ -41,7 +41,7 @@ from lib.ps2p.models.psp import pSp
 
 
 td_addr = "tcp://192.168.10.100:5001"
-// original is step 100
+# // original is step 100
 steps = 100
 
 
@@ -235,6 +235,7 @@ async def recv_eternally(sock):
             from_alignimg64 = base64.b64encode(
                 image_to_byte_array(from_alignimg))
             from_alignimgnp = await pil_to_numpy(from_alignimg)
+
             # from_alignimgnp = from_alignimg
 
             to_face = face_detector(to_NP, 1)
@@ -303,14 +304,25 @@ async def recv_eternally(sock):
                 "aligned_to": to_alignimgnp,
                 "morphing_images": morph_images
             }
+
             send_data_pkl = pickle.dumps(send_data)
             print('sending')
             print('morph length', len(morph_images))
             sock.send(send_data_pkl)
+
             # for pipe in sock.pipes:
             # await pipe.asend(send_data_pkl)
             print('done sending')
             print(f'total time {time.time()-recieved_time:.2f}')
+
+            # from is A
+            # to is B
+            # np.save()
+
+            np.save("{:%Y%m%d}".format(
+                datetime.datetime.now())+'A', from_alignimgnp)
+            np.save("{:%Y%m%d}".format(
+                datetime.datetime.now())+'B', to_alignimgnp)
         except:
             client = SimpleUDPClient(td_addr, 4000)
             client.send_message("/error", 1)
