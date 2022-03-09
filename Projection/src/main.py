@@ -40,7 +40,7 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
-td_addr = "tcp://192.168.10.100:5001"
+td_addr = "tcp://192.168.1.100:5001"
 # // original is step 100
 steps = 100
 
@@ -299,7 +299,7 @@ async def recv_eternally(sock):
             # sending
             send_data = {
                 "dw": np.linalg.norm(dlatent_morph),
-                "timestamp": "{:%Y%m%d}".format(datetime.datetime.now()),
+                "timestamp": "{:%Y%m%d%H:%M:%S}".format(datetime.datetime.now()),
                 "aligned_from": from_alignimgnp,
                 "aligned_to": to_alignimgnp,
                 "morphing_images": morph_images
