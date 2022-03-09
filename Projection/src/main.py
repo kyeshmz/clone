@@ -40,6 +40,8 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
+save_path = "/home/ubuntu/Dropbox/Projects/MorphingIdentity"
+
 td_addr = "tcp://192.168.1.100:5001"
 # // original is step 100
 steps = 100
@@ -319,10 +321,16 @@ async def recv_eternally(sock):
             # to is B
             # np.save()
 
-            np.save("{:%Y%m%d}".format(
+        # /home/ubuntu/Dropbox/Projects/MorphingIdentity
+            datepath = save_path + ("{:%Y%m%d}".format(
+                datetime.datetime.now()))
+            os.makedirs(datepath, exist_ok=True)
+
+            np.save(datepath+"{:%Y%m%d%H:%M:%S}".format(
                 datetime.datetime.now())+'A', from_alignimgnp)
-            np.save("{:%Y%m%d}".format(
+            np.save(datepath+"{:%Y%m%d%H:%M:%S}".format(
                 datetime.datetime.now())+'B', to_alignimgnp)
+            print("saving np")
         except:
             client = SimpleUDPClient(td_addr, 4000)
             client.send_message("/error", 1)
