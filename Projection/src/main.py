@@ -325,11 +325,17 @@ async def recv_eternally(sock):
             datepath = save_path + ("{:%Y%m%d}".format(
                 datetime.datetime.now())) + "/"
             os.makedirs(datepath, exist_ok=True)
+            print(datepath)
 
-            np.save(datepath+"{:%Y%m%d%H:%M:%S}".format(
-                datetime.datetime.now())+'A', from_alignimgnp)
-            np.save(datepath+"{:%Y%m%d%H:%M:%S}".format(
-                datetime.datetime.now())+'B', to_alignimgnp)
+            userAPath = datepath+"{:%Y%m%d%H%M%S}".format(
+                datetime.datetime.now())+'_A'
+            print(userAPath)
+            userBPath = datepath+"{:%Y%m%d%H%M%S}".format(
+                datetime.datetime.now())+'_B'
+            print(userBPath)
+
+            np.save(userAPath, from_alignimgnp)
+            np.save(userBPath, to_alignimgnp)
             print("saving np")
         except:
             client = SimpleUDPClient(td_addr, 4000)
