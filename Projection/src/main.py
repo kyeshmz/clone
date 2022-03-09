@@ -40,7 +40,7 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
-save_path = "/home/ubuntu/Dropbox/Projects/MorphingIdentity/"
+save_path = "/home/Dropbox/Projects/MorphingIdentity/"
 
 td_addr = "tcp://192.168.1.100:5001"
 # // original is step 100
@@ -331,7 +331,7 @@ async def recv_eternally(sock):
                 datetime.datetime.now())+'_A.npy'
             print(userAPath)
             userBPath = datepath+"{:%Y%m%d%H%M%S}".format(
-                datetime.datetime.now())+'_B.npy' 
+                datetime.datetime.now())+'_B.npy'
             print(userBPath)
 
             np.save(userAPath, from_alignimgnp)
