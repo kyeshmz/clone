@@ -7,7 +7,7 @@ If there is already a container, go to step 2A.
 If there is no container, we start by using the container below
 
 ```
-sudo docker run --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --gpus all -it --ipc=host -p 5001:5001 --rm -v /home/ubuntu/MorphingIdentity/:/home/ morphing /bin/bash
+sudo docker run --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --gpus all -it --ipc=host -p 5001:5001 --rm -v /home/ubuntu/:/home/ubuntu/ morphing /bin/bash
 
 ```
 
