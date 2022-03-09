@@ -328,10 +328,10 @@ async def recv_eternally(sock):
             print(datepath)
 
             userAPath = datepath+"{:%Y%m%d%H%M%S}".format(
-                datetime.datetime.now())+'_A'
+                datetime.datetime.now())+'_A.npy'
             print(userAPath)
             userBPath = datepath+"{:%Y%m%d%H%M%S}".format(
-                datetime.datetime.now())+'_B'
+                datetime.datetime.now())+'_B.npy' 
             print(userBPath)
 
             np.save(userAPath, from_alignimgnp)
