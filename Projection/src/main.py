@@ -40,7 +40,7 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
-save_path = "/home/ubuntu/Dropbox/Projects/MorphingIdentity"
+save_path = "/home/ubuntu/Dropbox/Projects/MorphingIdentity/"
 
 td_addr = "tcp://192.168.1.100:5001"
 # // original is step 100
@@ -321,9 +321,9 @@ async def recv_eternally(sock):
             # to is B
             # np.save()
 
-        # /home/ubuntu/Dropbox/Projects/MorphingIdentity
+        # /home/ubuntu/Dropbox/Projects/MorphingIdentity/
             datepath = save_path + ("{:%Y%m%d}".format(
-                datetime.datetime.now()))
+                datetime.datetime.now())) + "/"
             os.makedirs(datepath, exist_ok=True)
 
             np.save(datepath+"{:%Y%m%d%H:%M:%S}".format(
