@@ -40,7 +40,7 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
-save_path = "/home/Dropbox/Projects/MorphingIdentity/"
+save_path = "/home/ubuntu/Dropbox/Projects/MorphingIdentity/"
 
 td_addr = "tcp://192.168.1.100:5001"
 # // original is step 100
