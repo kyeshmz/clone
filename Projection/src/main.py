@@ -7,6 +7,7 @@ import io
 import multiprocessing
 import os
 import pickle
+import pwd
 import re
 import socket
 import sys
@@ -15,6 +16,7 @@ import typing
 from math import ceil
 
 import dlib
+import grd
 import IPython.display
 import numpy as np
 import pynng
@@ -325,6 +327,7 @@ async def recv_eternally(sock):
             datepath = save_path + ("{:%Y%m%d}".format(
                 datetime.datetime.now())) + "/"
             os.makedirs(datepath, exist_ok=True)
+            
             print(datepath)
 
             userAPath = datepath+"{:%Y%m%d%H%M%S}".format(
@@ -337,6 +340,12 @@ async def recv_eternally(sock):
             np.save(userAPath, from_alignimgnp)
             np.save(userBPath, to_alignimgnp)
             print("saving np")
+            
+            uid = pwd.getpwnam("ubuntu").pw_uid
+            gid = grp.getgrnam("shks-ubuntu").gr_gid
+            os.chown(datepath, uid, gid)
+            os.chown(userAPath, uid, gid)
+            os.chown(userBPath, uid, gid)
         except:
             client = SimpleUDPClient(td_addr, 4000)
             client.send_message("/error", 1)
