@@ -303,7 +303,7 @@ async def recv_eternally(sock):
             # sending
             send_data = {
                 "dw": np.linalg.norm(dlatent_morph),
-                "timestamp": "{:%Y%m%d%H:%M:%S}".format(datetime.datetime.now()),
+                "timestamp": "{:%Y%m%d%H%M%S}".format(datetime.datetime.now()),
                 "aligned_from": from_alignimgnp,
                 "aligned_to": to_alignimgnp,
                 "morphing_images": morph_images
