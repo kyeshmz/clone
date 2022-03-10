@@ -3,6 +3,7 @@ import asyncio
 import base64
 import datetime
 import glob
+import grp
 import io
 import multiprocessing
 import os
@@ -16,7 +17,6 @@ import typing
 from math import ceil
 
 import dlib
-import grd
 import IPython.display
 import numpy as np
 import pynng
@@ -327,7 +327,7 @@ async def recv_eternally(sock):
             datepath = save_path + ("{:%Y%m%d}".format(
                 datetime.datetime.now())) + "/"
             os.makedirs(datepath, exist_ok=True)
-            
+
             print(datepath)
 
             userAPath = datepath+"{:%Y%m%d%H%M%S}".format(
@@ -340,7 +340,7 @@ async def recv_eternally(sock):
             np.save(userAPath, from_alignimgnp)
             np.save(userBPath, to_alignimgnp)
             print("saving np")
-            
+
             uid = pwd.getpwnam("ubuntu").pw_uid
             gid = grp.getgrnam("shks-ubuntu").gr_gid
             os.chown(datepath, uid, gid)
