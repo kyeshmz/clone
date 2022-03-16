@@ -20,6 +20,7 @@ import dlib
 import IPython.display
 import numpy as np
 import pynng
+import pytz
 import scipy.ndimage
 import torch
 import torchvision as tv
@@ -303,7 +304,7 @@ async def recv_eternally(sock):
             # sending
             send_data = {
                 "dw": np.linalg.norm(dlatent_morph),
-                "timestamp": "{:%Y%m%d%H%M%S}".format(datetime.datetime.now()),
+                "timestamp": "{:%Y%m%d%H%M%S}".format(datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo'))),
                 "aligned_from": from_alignimgnp,
                 "aligned_to": to_alignimgnp,
                 "morphing_images": morph_images
@@ -325,27 +326,22 @@ async def recv_eternally(sock):
 
         # /home/ubuntu/Dropbox/Projects/MorphingIdentity/
             datepath = save_path + ("{:%Y%m%d}".format(
-                datetime.datetime.now())) + "/"
+                datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))) + "/"
             os.makedirs(datepath, exist_ok=True)
 
             print(datepath)
 
             userAPath = datepath+"{:%Y%m%d%H%M%S}".format(
-                datetime.datetime.now())+'_A.npy'
+                datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))+'_A.npy'
             print(userAPath)
             userBPath = datepath+"{:%Y%m%d%H%M%S}".format(
-                datetime.datetime.now())+'_B.npy'
+                datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))+'_B.npy'
             print(userBPath)
 
-            np.save(userAPath, from_alignimgnp)
-            np.save(userBPath, to_alignimgnp)
+            np.save(userAPath, dlatent_from)
+            np.save(userBPath, dlatent_to)
             print("saving np")
 
-            uid = pwd.getpwnam("ubuntu").pw_uid
-            gid = grp.getgrnam("shks-ubuntu").gr_gid
-            os.chown(datepath, uid, gid)
-            os.chown(userAPath, uid, gid)
-            os.chown(userBPath, uid, gid)
         except:
             client = SimpleUDPClient(td_addr, 4000)
             client.send_message("/error", 1)
