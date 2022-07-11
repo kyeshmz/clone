@@ -7,28 +7,7 @@ If there is already a container, go to step 2A.
 If there is no container, we start by using the container below
 
 ```
-sudo docker run --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --gpus all -it --ipc=host -p 5001:5001 --rm -v /home/ubuntu/:/home/ubuntu/ morphing /bin/bash
-
-```
-
-### 2A.Use after docker container starts
-
-To use after docker container is setup
-` docker exec -it containername /bin/bash`
-
-If the processs is running from before, we need to kill it
-`ps -a | grep python`
-
-then kill using pid
-`kill PIDOFPROCESS`
-
-### 3A.Inside of docker
-
-```
-
-cd /home/MorphingIdentity/Projection/src
-python main.py
-# exit out of CTRL-P + CTRL-Q
+docker run --shm-size=1g --ulimit memlock=-1  --ulimit stack=67108864 -d  --gpus all  --ipc=host -p 5001:5001   -v /home/ubuntu/:/home/ubuntu/ morphing /bin/bash -c "cd /home/ubuntu/MorphingIdentity/MorphingIdentity/Projection/src/; python /home/ubuntu/MorphingIdentity/MorphingIdentity/Projection/src/main.py"
 
 ```
 
