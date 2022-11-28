@@ -7,3 +7,5 @@ Main/.vscode
 Main/.*
 .venv
 Main/x_misc
+Main/Backup
+Main/debug_data
