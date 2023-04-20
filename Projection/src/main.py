@@ -45,7 +45,7 @@ from lib.ps2p.models.psp import pSp
 
 save_path = "/home/ubuntu/Dropbox/Projects/MorphingIdentity/"
 
-td_addr = "tcp://192.168.1.100:5001"
+td_addr = "tcp://192.168.191.128:5001"
 # // original is step 100
 steps = 100
 
@@ -63,7 +63,7 @@ def image_to_byte_array(image: Image):
     imgByteArr = imgByteArr.getvalue()
     return imgByteArr
 
-
+@torch.no_grad()
 def generate_zs_from_seeds(seeds):
     zs = []
     for seed_idx, seed in enumerate(seeds):
@@ -72,7 +72,7 @@ def generate_zs_from_seeds(seeds):
         zs.append(z)
     return zs
 
-
+@torch.no_grad()
 async def generate_images_from_ws(dlatents):
     imgs = []
     for row, dlatent in enumerate(dlatents):
@@ -256,13 +256,13 @@ async def recv_eternally(sock):
             # Embedding
             from_embedimg = transform(from_alignimg).unsqueeze(0)
             from_projimg, from_latents = net(
-                from_embedimg.to('cuda:0').float(),
+                from_embedimg.to('cuda').float(),
                 return_latents=True,
                 randomize_noise=False)
             from_latents = from_latents.to('cpu').detach().numpy()
 
             to_embedimg = transform(to_alignimg).unsqueeze(0)
-            to_projimg, to_latents = net(to_embedimg.to('cuda:0').float(),
+            to_projimg, to_latents = net(to_embedimg.to('cuda').float(),
                                          return_latents=True,
                                          randomize_noise=False)
             to_latents = to_latents.to('cpu').detach().numpy()
@@ -350,22 +350,14 @@ async def recv_eternally(sock):
 
 
 async def main():
-    print('starting pynng, listening to ', args.ip)
+    print('starting pynng, listening to ' ,td_addr)
     with pynng.Pair1(polyamorous=True) as sock:
         async with trio.open_nursery() as n:
             sock.dial(td_addr)
             n.start_soon(recv_eternally, sock)
 
 
-p = argparse.ArgumentParser(description=__doc__)
-p.add_argument(
-    '--ip',
-    help='Address we are getting images from; e.g. tcp://127.0.0.1:13134',
-    nargs='?',
-    const='192.168.10.100')
-args = p.parse_args()
-print('starting')
-print('starting tensorflow load')
+
 
 # client = udp_client.SimpleUDPClient("192.168.10.100", 3000)
 # client.send_message("/start", 1)
@@ -413,12 +405,12 @@ transform = tv.transforms.Compose([
 
 #  Load Pretrained Model
 model_path = './lib/ps2p/pretrained_models/psp_ffhq_encode.pt'
-opts = torch.load(model_path, map_location='cuda:0')['opts']
+opts = torch.load(model_path, map_location='cuda')['opts']
 opts['checkpoint_path'] = model_path
 # if 'learn_in_w' not in opts: opts['learn_in_w'] = False
 net = pSp(argparse.Namespace(**opts))
 net.eval()
-net.to('cuda:0')
+net.to('cuda')
 face_detector = dlib.get_frontal_face_detector()
 face_predictor = dlib.shape_predictor(
     './lib/dlib/shape_predictor_68_face_landmarks.dat')

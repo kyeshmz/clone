@@ -10,7 +10,7 @@ from .encoders import psp_encoders
 from .stylegan2.model import Generator
 from ..configs.paths_config import model_paths
 
-
+@torch.no_grad()
 def get_keys(d, name):
 	if 'state_dict' in d:
 		d = d['state_dict']
@@ -41,6 +41,7 @@ class pSp(nn.Module):
 			raise Exception('{} is not a valid encoders'.format(self.opts.encoder_type))
 		return encoder
 
+	@torch.no_grad()
 	def load_weights(self):
 		if self.opts.checkpoint_path is not None:
 			print('Loading pSp from checkpoint: {}'.format(self.opts.checkpoint_path))
@@ -63,6 +64,7 @@ class pSp(nn.Module):
 			else:
 				self.__load_latent_avg(ckpt, repeat=18)
 
+	@torch.no_grad()
 	def forward(self, x, resize=True, latent_mask=None, input_code=False, randomize_noise=True,
 	            inject_latent=None, return_latents=False, alpha=None):
 		if input_code:
@@ -101,9 +103,10 @@ class pSp(nn.Module):
 		else:
 			return images
 
+	@torch.no_grad()
 	def set_opts(self, opts):
 		self.opts = opts
-
+	@torch.no_grad()
 	def __load_latent_avg(self, ckpt, repeat=None):
 		if 'latent_avg' in ckpt:
 			self.latent_avg = ckpt['latent_avg'].to(self.opts.device)
