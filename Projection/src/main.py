@@ -45,7 +45,9 @@ from lib.ps2p.models.psp import pSp
 
 save_path = "/home/ubuntu/Dropbox/Projects/MorphingIdentity/"
 
+
 td_addr = "tcp://192.168.191.128:5001"
+cores = 16
 # // original is step 100
 steps = 100
 
@@ -168,10 +170,11 @@ async def image_align(src_file, lm, enable_padding=False):
     return img
 
 
-def resize(img):
+def resize(img_index,img):
     imglist = []
     img = Image.fromarray(img)
     img = img.resize((H, W), Image.ANTIALIAS)
+    img.save(f'${save_path}/src/tmp/{img_index}.jpg', format='JPEG')
     imglist.append(img)
     return imglist
 
@@ -237,6 +240,7 @@ async def recv_eternally(sock):
             from_landmarks = face_predictor(from_NP, from_face[0])
             from_landmarks = face_utils.shape_to_np(from_landmarks)
             from_alignimg = await image_align(from_PIL, from_landmarks)
+            from_alignimg.save(f'${save_path}/src/tmp/aligned_from.jpg', format='JPEG')
             from_alignimg64 = base64.b64encode(
                 image_to_byte_array(from_alignimg))
             from_alignimgnp = await pil_to_numpy(from_alignimg)
@@ -249,6 +253,7 @@ async def recv_eternally(sock):
             to_alignimg = await image_align(to_PIL, to_landmarks)
             to_alignimg64 = base64.b64encode(image_to_byte_array(to_alignimg))
             to_alignimgnp = await pil_to_numpy(to_alignimg)
+            to_alignimg.save(f'${save_path}/src/tmp/aligned_to.jpg',format="JPEG")
             # to_alignimgnp = from_alignimg
 
             ed = time.time()
@@ -292,7 +297,7 @@ async def recv_eternally(sock):
             print(f'generate {generate_time-embed_time:.2f}')
             morph_images = []
 
-            p = multiprocessing.Pool(16)
+            p = multiprocessing.Pool(cores)
             morph_images = p.map(resize, imgs)
             morph_images = [
                 entry for sublist in morph_images for entry in sublist
@@ -325,26 +330,26 @@ async def recv_eternally(sock):
             # np.save()
 
         # /home/ubuntu/Dropbox/Projects/MorphingIdentity/
-            datepath = save_path + ("{:%Y%m%d}".format(
-                datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))) + "/"
-            os.makedirs(datepath, exist_ok=True)
+            # datepath = save_path + ("{:%Y%m%d}".format(
+            #     datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))) + "/"
+            # os.makedirs(datepath, exist_ok=True)
 
-            print(datepath)
+            # print(datepath)
 
-            userAPath = datepath+"{:%Y%m%d%H%M%S}".format(
-                datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))+'_A.npy'
-            print(userAPath)
-            userBPath = datepath+"{:%Y%m%d%H%M%S}".format(
-                datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))+'_B.npy'
-            print(userBPath)
+            # userAPath = datepath+"{:%Y%m%d%H%M%S}".format(
+            #     datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))+'_A.npy'
+            # print(userAPath)
+            # userBPath = datepath+"{:%Y%m%d%H%M%S}".format(
+            #     datetime.datetime.now(tz=pytz.timezone('Asia/Tokyo')))+'_B.npy'
+            # print(userBPath)
 
-            np.save(userAPath, dlatent_from)
-            np.save(userBPath, dlatent_to)
-            print("saving np")
+            # np.save(userAPath, dlatent_from)
+            # np.save(userBPath, dlatent_to)
+            # print("saving np")
 
         except:
-            client = SimpleUDPClient(td_addr, 4000)
-            client.send_message("/error", 1)
+            # client = SimpleUDPClient(td_addr, 4000)
+            # client.send_message("/error", 1)
             print('error')
             continue
 
