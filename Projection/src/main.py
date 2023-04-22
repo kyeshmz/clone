@@ -43,7 +43,7 @@ from lib.ps2p.models.psp import pSp
 # ----stylegan2 files
 
 
-save_path = "/home/kye/clone/Projection"
+save_path = "/home/kye/clone2/Projection"
 
 td_addr = "tcp://192.168.191.38:5001"
 # // original is step 100
