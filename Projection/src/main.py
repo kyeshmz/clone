@@ -174,7 +174,7 @@ def resize(img_index, img):
     imglist = []
     img = Image.fromarray(img)
     img = img.resize((H, W), Image.ANTIALIAS)
-    img.save(f'{save_path}/src/tmp/{img_index}.jpg', format='JPEG')
+    # img.save(f'{save_path}/src/tmp/{img_index}.jpg', format='JPEG')
     imglist.append(img)
     return imglist
 
@@ -240,8 +240,8 @@ async def recv_eternally(sock):
             from_landmarks = face_predictor(from_NP, from_face[0])
             from_landmarks = face_utils.shape_to_np(from_landmarks)
             from_alignimg = await image_align(from_PIL, from_landmarks)
-            from_alignimg.save(
-                f'{save_path}/src/tmp/aligned_from.jpg', format='JPEG')
+            # from_alignimg.save(
+            #     f'{save_path}/src/tmp/aligned_from.jpg', format='JPEG')
             from_alignimg64 = base64.b64encode(
                 image_to_byte_array(from_alignimg))
             from_alignimgnp = await pil_to_numpy(from_alignimg)
@@ -252,8 +252,8 @@ async def recv_eternally(sock):
             to_landmarks = face_predictor(to_NP, to_face[0])
             to_landmarks = face_utils.shape_to_np(to_landmarks)
             to_alignimg = await image_align(to_PIL, to_landmarks)
-            to_alignimg.save(
-                f'{save_path}/src/tmp/aligned_to.jpg', format="JPEG")
+            # to_alignimg.save(
+            #     f'{save_path}/src/tmp/aligned_to.jpg', format="JPEG")
             to_alignimg64 = base64.b64encode(image_to_byte_array(to_alignimg))
             to_alignimgnp = await pil_to_numpy(to_alignimg)
             # to_alignimgnp = from_alignimg
@@ -322,8 +322,8 @@ async def recv_eternally(sock):
             print('morph length', len(morph_images))
 
             await sock.asend(send_data_pkl)
-            for pipe in sock.pipes:
-                await pipe.asend(send_data_pkl)
+            # for pipe in sock.pipes:
+            #     await pipe.asend(send_data_pkl)
 
             print('done sending')
             print(f'total time {time.time()-recieved_time:.2f}')
