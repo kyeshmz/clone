@@ -320,7 +320,10 @@ async def recv_eternally(sock):
             send_data_pkl = pickle.dumps(send_data)
             print('sending')
             print('morph length', len(morph_images))
+
             await sock.asend(send_data_pkl)
+            for pipe in sock.pipes:
+                await pipe.asend(send_data_pkl)
 
             print('done sending')
             print(f'total time {time.time()-recieved_time:.2f}')
