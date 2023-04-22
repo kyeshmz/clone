@@ -332,8 +332,8 @@ async def recv_eternally(sock):
         # /home/ubuntu/Dropbox/Projects/MorphingIdentity/
 
         except:
-            client = SimpleUDPClient(td_addr, 4000)
-            client.send_message("/error", 1)
+            # client = SimpleUDPClient(td_addr, 4000)
+            # client.send_message("/error", 1)
             print('error')
             continue
 
@@ -342,7 +342,7 @@ async def main():
     print('starting pynng, listening to ', td_addr)
     with pynng.Pair1(polyamorous=True) as sock:
         async with trio.open_nursery() as n:
-            sock.dial(td_addr)
+            sock.dial(td_addr, block=False)
             n.start_soon(recv_eternally, sock)
 
 
